@@ -134,7 +134,7 @@
 																		{/if}
 																	</div>
 																	<div class="col-xs-10">
-																		<p>{$product['name']|escape:'html':'UTF-8'}</p>
+																		<p>{$product['name']|escape:'html':'UTF-8'}{if $product.price_calculation_method == Product::PRICE_CALCULATION_METHOD_PER_DAY}{l s=' (per Night)'}{/if}</p>
 																		{if $product.allow_multiple_quantity}
 																			<div class="qty_container">
 																				<input type="text" class="form-control qty" id="qty_{$product.id_product}" name="room_service_product_qty_{$product.id_product}" data-id-product="{$product.id_product}" data-max_quantity="{$product.max_quantity}" value="{if $serviceSelected}{$cartRoom['selected_service'][$product['id_product']]['quantity']}{else}1{/if}">
@@ -150,7 +150,7 @@
 															</div>
 															<div class="col-xs-4">
 																{if ($product.show_price && !isset($restricted_country_mode)) || isset($groups)}
-																	<span class="pull-right">{if !$priceDisplay}{convertPrice price=$product.price_tax_incl}{else}{convertPrice price=$product.price_tax_exc}{/if}{if $product.price_calculation_method == Product::PRICE_CALCULATION_METHOD_PER_DAY}{l s='/Night'}{/if}</span>
+																	<span class="room-service-product-value pull-right" data-unit_price="{if !$priceDisplay}{$product.price_tax_incl}{else}{$product.price_tax_exc}{/if}" data-currency_sign="{$currency->sign}">{if !$priceDisplay}{convertPrice price=$cartRoom['selected_service'][$product['id_product']]['total_price_tax_incl']}{else}{convertPrice price=$cartRoom['selected_service'][$product['id_product']]['total_price_tax_excl']}{/if}</span>
 
 																{/if}
 															</div>
