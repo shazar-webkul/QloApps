@@ -2238,6 +2238,7 @@ const RoomStatusModal = {
             success: function(result) {
                 if (result.hasError == 0 && result.modalHtml) {
                     $('#footer').next('.bootstrap').append(result.modalHtml);
+                    var currentStatus = roomObj.data('id_status');
 
                     $('#room-status-modal #room_status_id_hotel_booking_detail').val(roomObj.data('id_hotel_booking_detail'));
                     $('#room-status-modal #room_status_date_from').val(roomObj.data('date_from'));
@@ -2246,14 +2247,26 @@ const RoomStatusModal = {
                     $('#room-status-modal #room_status_id_order').val(roomObj.data('id_order'));
                     $('#room-status-modal .booking_order_status').val(roomObj.data('id_status'));
 
-                    if (roomObj.data('id_status') == result.STATUS_CHECKED_IN) {
-                        $('.room_status_info_form .room_status_date').val(roomObj.data('date_to') + ' ' + roomObj.data('check_out_time'));
+                    if (currentStatus == result.STATUS_ALLOTED) { 
+                        $('.room_date_field_container').hide();
                     } else {
-                        $('.room_status_info_form .room_status_date').val(roomObj.data('date_from') + ' ' + roomObj.data('check_in_time'));
+                        $('.room_date_field_container').show();
                     }
 
-                    $('#room-status-modal .booking_order_status option:selected').attr('disabled', 'disabled');
-
+                    if (currentStatus == result.STATUS_CHECKED_OUT) {
+                        if (roomObj.data('check_out') && roomObj.data('check_out') !== "0000-00-00 00:00:00") {
+                            $('.room_status_info_form .room_status_date').val(roomObj.data('check_out'));
+                        } else {
+                            $('.room_status_info_form .room_status_date').val(roomObj.data('date_to') + ' ' + roomObj.data('check_out_time'));
+                        }
+                    } else {
+                        if (roomObj.data('check_in') && roomObj.data('check_in') !== "0000-00-00 00:00:00") {
+                            $('.room_status_info_form .room_status_date').val(roomObj.data('check_in'));
+                        } else {
+                            $('.room_status_info_form .room_status_date').val(roomObj.data('date_from') + ' ' + roomObj.data('check_in_time'));
+                        }
+                    }
+                    
                     $('#room-status-modal').modal('show');
                 } else if (result.errors) {
                     showErrorMessage();
