@@ -158,10 +158,18 @@
                                         <td colspan="2" class="price" id="total_price_without_tax">{displayPrice price=$total_price_without_tax}</td>
                                     </tr>
                                 {/if}
-                                <tr class="cart_total_tax">
-                                    <td colspan="4" class="text-right">{l s='Tax'}</td>
-                                    <td colspan="2" class="price" id="total_tax" >{displayPrice price=$total_tax}</td>
-                                </tr>
+                                {if isset($fixed_tax) && $fixed_tax > 0}
+                                    <tr class="cart_total_tax">
+                                        <td colspan="4" class="text-right">{if isset($fixed_tax_name) && $fixed_tax_name}{$fixed_tax_name|escape:'html':'UTF-8'}{else}{l s='Fixed Tax'}{/if}</td>
+                                        <td colspan="2" class="price" id="fixed_tax">{displayPrice price=$fixed_tax}</td>
+                                    </tr>
+                                {/if}
+                                {if $other_taxes > 0}
+                                    <tr class="cart_total_tax">
+                                        <td colspan="4" class="text-right">{l s='Tax'}</td>
+                                        <td colspan="2" class="price" id="total_tax" >{displayPrice price=$other_taxes}</td>
+                                    </tr>
+                                {/if}
                             {/if}
                             <tr class="cart_total_price">
                                 <td colspan="4" class="total_price_container text-right"><span>{l s='Total'}</span></td>

@@ -38,6 +38,13 @@ class HotelBranchInformation extends ObjectModel
     public $map_formated_address;
     public $map_input_text;
     public $active_refund;
+    public $fixed_tax_value;
+    public $fixed_tax_calc_method;
+    public $fixed_tax_occupancy_based;
+    public $fixed_tax_apply_on_child;
+    public $fixed_tax_apply_on_infant;
+    public $fixed_tax_enabled;
+    public $fixed_tax_name;
     public $fax;
     public $date_add;
     public $date_upd;
@@ -60,6 +67,12 @@ class HotelBranchInformation extends ObjectModel
             'map_formated_address' => array('type' => self::TYPE_HTML, 'validate' => 'isCleanHtml'),
             'map_input_text' => array('type' => self::TYPE_STRING, 'validate' => 'isString'),
             'active_refund' => array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
+            'fixed_tax_value' => array('type' => self::TYPE_FLOAT, 'validate' => 'isFloat'),
+            'fixed_tax_calc_method' => array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId'),
+            'fixed_tax_occupancy_based' => array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
+            'fixed_tax_apply_on_child' => array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
+            'fixed_tax_apply_on_infant' => array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
+            'fixed_tax_enabled' => array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
             'fax' => array('type' => self::TYPE_STRING, 'validate' => 'isGenericName'),
             'date_add' => array('type' => self::TYPE_DATE, 'validate' => 'isDate', 'copy_post' => false),
             'date_upd' => array('type' => self::TYPE_DATE, 'validate' => 'isDate', 'copy_post' => false),
@@ -67,9 +80,13 @@ class HotelBranchInformation extends ObjectModel
             //lang fields
             'policies' => array('type' => self::TYPE_HTML, 'validate' => 'isCleanHtml', 'lang' => true),
             'hotel_name' => array('type' => self::TYPE_STRING, 'lang' => true, 'required' => true, 'validate' => 'isGenericName'),
+            'fixed_tax_name' => array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCatalogName', 'size' => 255),
             'description' => array('type' => self::TYPE_HTML, 'validate' => 'isCleanHtml', 'lang' => true),
             'short_description' => array('type' => self::TYPE_HTML, 'validate' => 'isCleanHtml', 'lang' => true),
     ), );
+
+    const FIXED_TAX_CALCULATION_METHOD_PER_STAY = Product::PRICE_CALCULATION_METHOD_PER_BOOKING;
+    const FIXED_TAX_CALCULATION_METHOD_PER_NIGHT = Product::PRICE_CALCULATION_METHOD_PER_DAY;
 
     // Webservice fields
     public $id_country;
@@ -257,6 +274,69 @@ class HotelBranchInformation extends ObjectModel
             }
         }
         return $hotelAccessInfo;
+    }
+
+    public static function getHtlFixedTax($idHotel, $idLang = null)
+    {
+        if (!$idLang) {
+            $idLang = Context::getContext()->language->id;
+        }
+
+        $query = new DbQuery();
+        $query->select('hbi.`fixed_tax_value`, hbi.`fixed_tax_calc_method`, hbi.`fixed_tax_occupancy_based`, hbi.`fixed_tax_apply_on_child`, hbi.`fixed_tax_apply_on_infant`, hbi.`fixed_tax_enabled`, hbl.`fixed_tax_name`');
+        $query->from('htl_branch_info', 'hbi');
+        $query->leftJoin('htl_branch_info_lang', 'hbl', 'hbl.`id` = hbi.`id` AND hbl.`id_lang` = '.(int)$idLang);
+        $query->where('hbi.`id` = '.(int)$idHotel);
+        $fixedTax = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow($query);
+
+        if (!$fixedTax) {
+            return array();
+        }
+
+        $fixedTax['fixed_tax_value'] = (float)$fixedTax['fixed_tax_value'];
+        $fixedTax['fixed_tax_calc_method'] = (int)$fixedTax['fixed_tax_calc_method'];
+        $fixedTax['fixed_tax_occupancy_based'] = (bool)$fixedTax['fixed_tax_occupancy_based'];
+        $fixedTax['fixed_tax_apply_on_child'] = (bool)$fixedTax['fixed_tax_apply_on_child'];
+        $fixedTax['fixed_tax_apply_on_infant'] = (bool)$fixedTax['fixed_tax_apply_on_infant'];
+        $fixedTax['fixed_tax_enabled'] = (bool)$fixedTax['fixed_tax_enabled'];
+        $fixedTax['fixed_tax_name'] = $fixedTax['fixed_tax_name'] ? $fixedTax['fixed_tax_name'] : '';
+
+        return $fixedTax;
+    }
+
+    public static function calculateFixedTaxAmount($idHotel, $basePriceTaxExcl, $dateFrom, $dateTo, $adults = 0, $children = 0, $infants = 0) {
+        $basePriceTaxExcl = (float)$basePriceTaxExcl;
+        if (!$basePriceTaxExcl || !$idHotel) {
+            return 0;
+        }
+
+        $fixedTax = self::getHtlFixedTax((int)$idHotel);
+        if (!$fixedTax || empty($fixedTax['fixed_tax_enabled']) || empty($fixedTax['fixed_tax_value'])) {
+            return 0;
+        }
+
+        $fixedTaxAmount = (float)$fixedTax['fixed_tax_value'];
+        if ($fixedTaxAmount <= 0) {
+            return 0;
+        }
+
+        if ((int)$fixedTax['fixed_tax_calc_method'] == self::FIXED_TAX_CALCULATION_METHOD_PER_NIGHT) {
+            $numNights = (int) HotelHelper::getNumberOfDays($dateFrom, $dateTo);
+            $fixedTaxAmount *= max(1, $numNights);
+        }
+
+        if (!empty($fixedTax['fixed_tax_occupancy_based'])) {
+            $eligibleGuests = max(0, (int)$adults);
+            if (!empty($fixedTax['fixed_tax_apply_on_child'])) {
+                $eligibleGuests += max(0, (int)$children);
+            }
+            if (!empty($fixedTax['fixed_tax_apply_on_infant'])) {
+                $eligibleGuests += max(0, (int)$infants);
+            }
+            $fixedTaxAmount *= max(1, $eligibleGuests);
+        }
+
+        return Tools::ps_round((float)$fixedTaxAmount, _PS_PRICE_COMPUTE_PRECISION_);
     }
 
     // Add profile hotel access while profile is deleted

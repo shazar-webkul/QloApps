@@ -90,6 +90,12 @@
         {hook h='displayBeforeCartTotalTax'}
     {/block}
     {if $show_taxes}
+        {if isset($fixed_tax) && $fixed_tax > 0}
+            <p class="cart_total_tax">
+                <span>{if isset($fixed_tax_name) && $fixed_tax_name}{$fixed_tax_name|escape:'html':'UTF-8'}{else}{l s='Fixed Tax'}{/if}</span>
+                <span class="cart_total_values" id="fixed_tax">{displayPrice price=$fixed_tax}</span>
+            </p>
+        {/if}
         <p class="cart_total_tax">
             <span>{l s='Total tax'}</span>
             <span class="cart_total_values">{displayPrice price=($total_tax_without_discount)}</span>

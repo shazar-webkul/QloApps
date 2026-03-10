@@ -937,6 +937,9 @@
 
                             {assign var=order_total_price_tax_excl value=($total_rooms_price_tax_excl + $total_room_services_and_demands_tax_excl + $total_products_price_tax_excl)}
                             {assign var=order_total_price_tax_incl value=($total_rooms_price_tax_incl + $total_room_services_and_demands_tax_incl + $total_products_price_tax_incl)}
+                            {if isset($fixed_tax) && $fixed_tax > 0}
+                                {assign var=order_total_price_tax_incl value=($order_total_price_tax_incl + $fixed_tax)}
+                            {/if}
 
                             {if $total_rooms_price_tax_excl}
                                 <tr id="total_products">
@@ -1043,6 +1046,17 @@
                                                         <td class="text-left">{l s='Convenience Fee Tax'}</td>
                                                         <td class="amount text-right nowrap">
                                                             {displayPrice price=($total_convenience_fee_tax_incl - $total_convenience_fee_tax_excl) currency=$currency->id}
+                                                        </td>
+                                                        <td class="partial_refund_fields current-edit" style="display:none;"></td>
+                                                    </tr>
+                                                {/if}
+                                                {if isset($fixed_tax) && $fixed_tax > 0}
+                                                    <tr id="total_fixed_tax">
+                                                        <td class="text-left">
+                                                            {if isset($fixed_tax_name) && $fixed_tax_name}{$fixed_tax_name|escape:'html':'UTF-8'}{else}{l s='Fixed Tax'}{/if}
+                                                        </td>
+                                                        <td class="amount text-right nowrap">
+                                                            {displayPrice price=$fixed_tax currency=$currency->id}
                                                         </td>
                                                         <td class="partial_refund_fields current-edit" style="display:none;"></td>
                                                     </tr>

@@ -3603,6 +3603,14 @@ class AdminOrdersControllerCore extends AdminController
         $hotelStandaloneProducts = $objProduct->getServiceProducts(null, Product::SELLING_PREFERENCE_HOTEL_STANDALONE);
         $standaloneProducts = $objProduct->getServiceProducts(null, Product::SELLING_PREFERENCE_STANDALONE);
 
+        $cart = new Cart($order->id_cart);
+        $fixedTax = 0;
+        $fixedTaxName = '';
+        if (Validate::isLoadedObject($cart)) {
+            $fixedTax = $cart->getFixedTaxForCart();
+            $fixedTaxName = $cart->getFixedTaxNameForCart($this->context->language->id);
+        }
+
         $this->tpl_view_vars = array(
             'hotelStandaloneProducts' => $hotelStandaloneProducts,
             'standaloneProducts' => $standaloneProducts,
@@ -3633,7 +3641,9 @@ class AdminOrdersControllerCore extends AdminController
             'hotel_booking' => $hotelBooking,
             /*END*/
             'order' => $order,
-            'cart' => new Cart($order->id_cart),
+            'cart' => $cart,
+            'fixed_tax' => $fixedTax,
+            'fixed_tax_name' => $fixedTaxName,
             'customer' => $customer,
             'allowBackdateOrder' => $allowBackdateOrder,
             'gender' => $gender,

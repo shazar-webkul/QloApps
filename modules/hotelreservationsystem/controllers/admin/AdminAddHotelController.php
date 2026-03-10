@@ -215,13 +215,15 @@ class AdminAddHotelController extends ModuleAdminController
         if ($idCountry) {
             $stateOptions = State::getStatesByIdCountry($idCountry);
         }
-
         $smartyVars['state_var'] = $stateOptions;
+        $smartyVars['currency'] = $this->context->currency;
         $smartyVars['enabledDisplayMap'] = Configuration::get('PS_API_KEY') && Configuration::get('PS_MAP_ID') && Configuration::get('WK_GOOGLE_ACTIVE_MAP');
         $smartyVars['ps_img_dir'] = _PS_IMG_.'l/';
         $smartyVars['PS_MAX_CHECKOUT_OFFSET'] = (int) Configuration::get('PS_MAX_CHECKOUT_OFFSET');
         $smartyVars['PS_MIN_BOOKING_OFFSET'] = (int) Configuration::get('PS_MIN_BOOKING_OFFSET');
         $smartyVars['WK_ORDER_REFUND_ALLOWED'] = Configuration::get('WK_ORDER_REFUND_ALLOWED');
+        $smartyVars['fixedTaxCalculationMethodPerStay'] = HotelBranchInformation::FIXED_TAX_CALCULATION_METHOD_PER_STAY;
+        $smartyVars['fixedTaxCalculationMethodPerNight'] = HotelBranchInformation::FIXED_TAX_CALCULATION_METHOD_PER_NIGHT;
 
         $this->context->smarty->assign($smartyVars);
 
@@ -268,6 +270,15 @@ class AdminAddHotelController extends ModuleAdminController
         $map_formated_address = Tools::getValue('locformatedAddr');
         $map_input_text = Tools::getValue('googleInputField');
         $hotelFeatures = Tools::getValue('id_features', array());
+        $fixedTaxEnabled = (int) Tools::getValue('fixed_tax_enabled');
+        $fixedTaxValue = Tools::getValue('fixed_tax_value');
+        $fixedTaxCalculationMethod = (int) Tools::getValue('fixed_tax_calc_method');
+        $fixedTaxOccupancyBased = (int) Tools::getValue('fixed_tax_occupancy_based');
+        $fixedTaxApplyOnChild = (int) Tools::getValue('fixed_tax_apply_on_child');
+        $fixedTaxApplyOnInfant = (int) Tools::getValue('fixed_tax_apply_on_infant');
+        if (!in_array($fixedTaxCalculationMethod, array(HotelBranchInformation::FIXED_TAX_CALCULATION_METHOD_PER_STAY, HotelBranchInformation::FIXED_TAX_CALCULATION_METHOD_PER_NIGHT))) {
+            $fixedTaxCalculationMethod = HotelBranchInformation::FIXED_TAX_CALCULATION_METHOD_PER_STAY;
+        }
         $shortDescriptionMaxChar = Configuration::get('PS_SHORT_DESC_LIMIT') ? Configuration::get('PS_SHORT_DESC_LIMIT') : Configuration::PS_SHORT_DESC_LIMIT;
 
         // check if field is atleast in default language. Not available in default prestashop
@@ -285,6 +296,26 @@ class AdminAddHotelController extends ModuleAdminController
                         $this->errors[] = $this->l('Invalid Hotel name in ').$lang['name'];
                     }
                 }
+
+                if ($fixedTaxName = trim(Tools::getValue('fixed_tax_name_'.$lang['id_lang']))) {
+                    if (!Validate::isCatalogName($fixedTaxName)) {
+                        $this->errors[] = $this->l('Invalid fixed tax name in ').$lang['name'];
+                    }
+                }
+            }
+        }
+
+        if ($fixedTaxEnabled) {
+            if (!trim(Tools::getValue('fixed_tax_name_'.$defaultLangId))) {
+                $this->errors[] = $this->l('Fixed tax name is required at least in ').$objDefaultLanguage['name'];
+            }
+
+            if ($fixedTaxValue === '' || !Validate::isFloat($fixedTaxValue)) {
+                $this->errors[] = $this->l('Fixed tax value is invalid.');
+            }
+
+            if (!in_array($fixedTaxCalculationMethod,array(HotelBranchInformation::FIXED_TAX_CALCULATION_METHOD_PER_STAY, HotelBranchInformation::FIXED_TAX_CALCULATION_METHOD_PER_NIGHT))) {
+                $this->errors[] = $this->l('Invalid fixed tax calculation method.');
             }
         }
 
@@ -503,6 +534,12 @@ class AdminAddHotelController extends ModuleAdminController
             $objHotelBranch->active = $active;
             $objHotelBranch->active_refund = $activeRefund;
             $objHotelBranch->fax = $fax;
+            $objHotelBranch->fixed_tax_value = (float)$fixedTaxValue;
+            $objHotelBranch->fixed_tax_calc_method = (int)$fixedTaxCalculationMethod;
+            $objHotelBranch->fixed_tax_occupancy_based = (int)$fixedTaxOccupancyBased;
+            $objHotelBranch->fixed_tax_apply_on_child = (int)$fixedTaxApplyOnChild;
+            $objHotelBranch->fixed_tax_apply_on_infant = (int)$fixedTaxApplyOnInfant;
+            $objHotelBranch->fixed_tax_enabled = (int)$fixedTaxEnabled;
 
             // lang fields
             $hotelCatName = array();
@@ -518,6 +555,16 @@ class AdminAddHotelController extends ModuleAdminController
                 } else {
                     $objHotelBranch->hotel_name[$lang['id_lang']] = trim(Tools::getValue(
                         'hotel_name_'.$lang['id_lang']
+                    ));
+                }
+
+                if (!trim(Tools::getValue('fixed_tax_name_'.$lang['id_lang']))) {
+                    $objHotelBranch->fixed_tax_name[$lang['id_lang']] = trim(Tools::getValue(
+                        'fixed_tax_name_'.$defaultLangId
+                    ));
+                } else {
+                    $objHotelBranch->fixed_tax_name[$lang['id_lang']] = trim(Tools::getValue(
+                        'fixed_tax_name_'.$lang['id_lang']
                     ));
                 }
 

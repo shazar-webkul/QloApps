@@ -1639,6 +1639,8 @@ class CartCore extends ObjectModel
         $products_total = array();
         $ecotax_total = 0;
         $totalDemandsPrice = 0;
+        $totalFixedTax = 0;
+        $applyFixedTax = ($with_taxes && in_array($type, array(Cart::BOTH, Cart::BOTH_WITHOUT_SHIPPING, Cart::ONLY_PRODUCTS_WITH_DEMANDS)));
         $objCartBookingData = new HotelCartBookingData();
         $objServiceProductCartDetail = new ServiceProductCartDetail();
         $objAdvPayment = new HotelAdvancedPayment();
@@ -1888,6 +1890,10 @@ class CartCore extends ObjectModel
                         $totalPriceByProduct = $roomTotalPrice['total_price_tax_excl'];
                     }
 
+                    if ($applyFixedTax) {
+                        $totalFixedTax += HotelBranchInformation::calculateFixedTaxAmount((int)$cartRoomInfo['id_hotel'], (float)$roomTotalPrice['total_price_tax_excl'], $cartRoomInfo['date_from'], $cartRoomInfo['date_to'], (int)$cartRoomInfo['adults'], (int)$cartRoomInfo['children']);
+                    }
+
                     // If customer has selected advance payment of the cart
                     if ($type == Cart::ADVANCE_PAYMENT || $type == Cart::ADVANCE_PAYMENT_ONLY_PRODUCTS) {
                         $advProductPrice = $objAdvPayment->getProductMinAdvPaymentAmountByIdCart(
@@ -2050,6 +2056,10 @@ class CartCore extends ObjectModel
             $order_total += $shipping_fees + $wrapping_fees;
         }
 
+        if ($applyFixedTax) {
+            $order_total += $totalFixedTax;
+        }
+
         if ($order_total < 0 && $type != Cart::ONLY_DISCOUNTS) {
             return 0;
         }
@@ -2059,6 +2069,77 @@ class CartCore extends ObjectModel
         }
 
         return Tools::ps_round((float)$order_total, $compute_precision);
+    }
+
+    public function getFixedTaxForCart()
+    {
+        if (!$this->id || !Module::isInstalled('hotelreservationsystem') || !Module::isEnabled('hotelreservationsystem')) {
+            return 0;
+        }
+
+        $products = $this->getProducts(false, false, null);
+        if (!$products) {
+            return 0;
+        }
+
+        $fixedTaxTotal = 0;
+        $objCartBookingData = new HotelCartBookingData();
+        foreach ($products as $product) {
+            if (empty($product['booking_product'])) {
+                continue;
+            }
+
+            if ($roomTypesByIdProduct = $objCartBookingData->getCartInfoIdCartIdProduct($this->id, $product['id_product'])) {
+                foreach ($roomTypesByIdProduct as $cartRoomInfo) {
+                    $occupancy = array(
+                        array(
+                            'adults' => $cartRoomInfo['adults'],
+                            'children' => $cartRoomInfo['children'],
+                            'child_ages' => json_decode($cartRoomInfo['child_ages'])
+                        )
+                    );
+                    $roomTotalPrice = HotelRoomTypeFeaturePricing::getRoomTypeTotalPrice($cartRoomInfo['id_product'], $cartRoomInfo['date_from'], $cartRoomInfo['date_to'], $occupancy, Group::getCurrent()->id, $cartRoomInfo['id_cart'], $cartRoomInfo['id_guest'], $cartRoomInfo['id_room'], 0);
+                    $fixedTaxTotal += HotelBranchInformation::calculateFixedTaxAmount((int)$cartRoomInfo['id_hotel'], (float)$roomTotalPrice['total_price_tax_excl'], $cartRoomInfo['date_from'], $cartRoomInfo['date_to'], (int)$cartRoomInfo['adults'], (int)$cartRoomInfo['children']);
+                }
+            }
+        }
+
+        return Tools::ps_round((float)$fixedTaxTotal, _PS_PRICE_COMPUTE_PRECISION_);
+    }
+
+    public function getFixedTaxNameForCart($idLang = null)
+    {
+        if (!$this->id || !Module::isInstalled('hotelreservationsystem') || !Module::isEnabled('hotelreservationsystem')) {
+            return '';
+        }
+
+        if (!$idLang) {
+            $idLang = Context::getContext()->language->id;
+        }
+
+        $products = $this->getProducts(false, false, null);
+        if (!$products) {
+            return '';
+        }
+
+        $fixedTaxNames = array();
+        $objCartBookingData = new HotelCartBookingData();
+        foreach ($products as $product) {
+            if (empty($product['booking_product'])) {
+                continue;
+            }
+
+            if ($roomTypesByIdProduct = $objCartBookingData->getCartInfoIdCartIdProduct($this->id, $product['id_product'])) {
+                foreach ($roomTypesByIdProduct as $cartRoomInfo) {
+                    $fixedTaxInfo = HotelBranchInformation::getHtlFixedTax((int)$cartRoomInfo['id_hotel'], (int)$idLang);
+                    if (!empty($fixedTaxInfo['fixed_tax_enabled']) && !empty($fixedTaxInfo['fixed_tax_name'])) {
+                        $fixedTaxNames[$fixedTaxInfo['fixed_tax_name']] = $fixedTaxInfo['fixed_tax_name'];
+                    }
+                }
+            }
+        }
+
+        return implode(', ', $fixedTaxNames);
     }
 
     /**
@@ -3931,11 +4012,13 @@ class CartCore extends ObjectModel
         }
 
         $objHotelAdvancedPayment = new HotelAdvancedPayment();
+        $fixed_tax = $this->getFixedTaxForCart();
+        $fixed_tax_name = $this->getFixedTaxNameForCart($id_lang);
         $total_rooms_with_services_without_discount_te = $total_rooms + $total_demands + $total_additional_services + $total_additional_services_auto_add + $total_standalone_service_products;
         $total_rooms_with_services_without_discount_ti = $total_rooms_wt + $total_demands_wt + $total_additional_services_wt + $total_additional_services_auto_add_wt + $total_standalone_service_products_wt;
 
         $cart_total_without_discount_te = $total_rooms_with_services_without_discount_te + $convenience_fee;
-        $cart_total_without_discount_ti = $total_rooms_with_services_without_discount_ti + $convenience_fee_wt;
+        $cart_total_without_discount_ti = $total_rooms_with_services_without_discount_ti + $convenience_fee_wt + $fixed_tax;
         $total_tax_without_discount = $cart_total_without_discount_ti - $cart_total_without_discount_te;
         if ($total_tax_without_discount < 0) {
             $total_tax_without_discount = 0;
@@ -3986,7 +4069,9 @@ class CartCore extends ObjectModel
             'total_rooms_with_services_without_discount_ti' => $total_rooms_with_services_without_discount_ti,
             'cart_total_without_discount_te' => $cart_total_without_discount_te,
             'cart_total_without_discount_ti' => $cart_total_without_discount_ti,
-            'total_tax_without_discount' => $total_tax_without_discount
+            'total_tax_without_discount' => $total_tax_without_discount,
+            'fixed_tax' => $fixed_tax,
+            'fixed_tax_name' => $fixed_tax_name
         );
         $hook = Hook::exec('actionCartSummary', $summary, null, true);
         if (is_array($hook)) {

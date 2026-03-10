@@ -93,6 +93,12 @@
 					</a>
 				</li>
 				<li>
+					<a href="#hotel-fixed-tax" data-toggle="tab">
+						<i class="icon-money"></i>
+						{l s='Fixed Taxes' mod='hotelreservationsystem'}
+					</a>
+				</li>
+				<li>
 					<a href="#hotel-features" data-toggle="tab">
 						<i class="icon-list-alt"></i>
 						{l s='Features' mod='hotelreservationsystem'}
@@ -578,6 +584,114 @@
 
 					{hook h='displayAdminAddHotelFormRefundPoliciesTabAfter' id_hotel=$hook_arg_id_hotel}
 				</div>
+				<div class="tab-pane" id="hotel-fixed-tax">
+					{hook h='displayAdminAddHotelFormFixedTaxesTabBefore' id_hotel=$hook_arg_id_hotel}
+
+					{if isset($hotel_info.id) && $hotel_info.id}
+						<div class="form-group">
+							<label class="control-label col-lg-3">
+								<span>{l s='Enable Fixed Tax' mod='hotelreservationsystem'}</span>
+							</label>
+							<div class="col-lg-6">
+								<span class="switch prestashop-switch fixed-width-lg">
+									<input type="radio" value="1" id="fixed_tax_enabled_on" name="fixed_tax_enabled" {if isset($smarty.post.fixed_tax_enabled)}{if $smarty.post.fixed_tax_enabled}checked="checked"{/if}{elseif isset($hotel_info) && $hotel_info.fixed_tax_enabled}checked="checked"{/if}>
+									<label for="fixed_tax_enabled_on">{l s='Yes' mod='hotelreservationsystem'}</label>
+									<input type="radio" value="0" id="fixed_tax_enabled_off" name="fixed_tax_enabled" {if isset($smarty.post.fixed_tax_enabled)}{if !$smarty.post.fixed_tax_enabled}checked="checked"{/if}{elseif !isset($hotel_info) || !isset($hotel_info.fixed_tax_enabled) || !$hotel_info.fixed_tax_enabled}checked="checked"{/if}>
+									<label for="fixed_tax_enabled_off">{l s='No' mod='hotelreservationsystem'}</label>
+									<a class="slide-button btn"></a>
+								</span>
+							</div>
+						</div>
+						<div id="fixed_tax_fields" {if isset($smarty.post.fixed_tax_enabled)}{if !$smarty.post.fixed_tax_enabled}style="display:none;"{/if}{elseif !isset($hotel_info) || !isset($hotel_info.fixed_tax_enabled) || !$hotel_info.fixed_tax_enabled}style="display:none;"{/if}>
+							<div class="form-group">
+								<label class="col-sm-3 control-label required" for="fixed_tax_name">
+									{l s='Fixed Tax Name :' mod='hotelreservationsystem'}
+									{include file="../../../_partials/htl-form-fields-flag.tpl"}
+								</label>
+								<div class="col-lg-6">
+									{foreach from=$languages item=language}
+										{assign var="fixed_tax_name" value="fixed_tax_name_`$language.id_lang`"}
+										<input type="text"
+										id="fixed_tax_name_{$language.id_lang}"
+										name="fixed_tax_name_{$language.id_lang}"
+										value="{if isset($smarty.post.$fixed_tax_name)}{$smarty.post.$fixed_tax_name|escape:'htmlall':'UTF-8'}{elseif isset($edit)}{$hotel_info.fixed_tax_name[{$language.id_lang}]|escape:'htmlall':'UTF-8'}{/if}"
+										class="form-control wk_text_field_all wk_text_field_{$language.id_lang}"
+										maxlength="255"
+										{if $currentLang.id_lang != $language.id_lang}style="display:none;"{/if} />
+									{/foreach}
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="control-label col-sm-3 required" for="fixed_tax_value">{l s='Value :' mod='hotelreservationsystem'}</label>
+								<div class="col-lg-2">
+									<div class="input-group">
+										<span class="input-group-addon">{$currency->prefix}{$currency->suffix}</span>
+										<input type="text" class="form-control" id="fixed_tax_value" name="fixed_tax_value" value="{if isset($smarty.post.fixed_tax_value)}{$smarty.post.fixed_tax_value|escape:'html':'UTF-8'}{elseif isset($edit) && isset($hotel_info.fixed_tax_value)}{$hotel_info.fixed_tax_value|escape:'html':'UTF-8'}{else}0{/if}" />
+									</div>
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="control-label col-sm-3 required" for="fixed_tax_calc_method">{l s='Price Calculation Method :' mod='hotelreservationsystem'}</label>
+								<div class="col-sm-3">
+									<select class="form-control" id="fixed_tax_calc_method" name="fixed_tax_calc_method">
+										<option value="{$fixedTaxCalculationMethodPerStay|intval}" {if (isset($smarty.post.fixed_tax_calc_method) && $smarty.post.fixed_tax_calc_method == $fixedTaxCalculationMethodPerStay) || (isset($edit) && isset($hotel_info.fixed_tax_calc_method) && $hotel_info.fixed_tax_calc_method == $fixedTaxCalculationMethodPerStay) || (!isset($smarty.post.fixed_tax_calc_method) && (!isset($edit) || !isset($hotel_info.fixed_tax_calc_method)))}selected{/if}>{l s='Add this tax once for the booking range' mod='hotelreservationsystem'}</option>
+										<option value="{$fixedTaxCalculationMethodPerNight|intval}" {if (isset($smarty.post.fixed_tax_calc_method) && $smarty.post.fixed_tax_calc_method == $fixedTaxCalculationMethodPerNight) || (isset($edit) && isset($hotel_info.fixed_tax_calc_method) && $hotel_info.fixed_tax_calc_method == $fixedTaxCalculationMethodPerNight)}selected{/if}>{l s='Add this tax for each day of booking' mod='hotelreservationsystem'}</option>
+									</select>
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="control-label col-lg-3">
+									<span>{l s='Use occupancy-based calculation' mod='hotelreservationsystem'}</span>
+								</label>
+								<div class="col-lg-6">
+									<span class="switch prestashop-switch fixed-width-lg">
+										<input type="radio" value="1" id="fixed_tax_occupancy_based_on" name="fixed_tax_occupancy_based" {if isset($smarty.post.fixed_tax_occupancy_based)}{if $smarty.post.fixed_tax_occupancy_based}checked="checked"{/if}{elseif isset($hotel_info) && $hotel_info.fixed_tax_occupancy_based}checked="checked"{/if}>
+										<label for="fixed_tax_occupancy_based_on">{l s='Yes' mod='hotelreservationsystem'}</label>
+										<input type="radio" value="0" id="fixed_tax_occupancy_based_off" name="fixed_tax_occupancy_based" {if isset($smarty.post.fixed_tax_occupancy_based)}{if !$smarty.post.fixed_tax_occupancy_based}checked="checked"{/if}{elseif !isset($hotel_info) || !isset($hotel_info.fixed_tax_occupancy_based) || !$hotel_info.fixed_tax_occupancy_based}checked="checked"{/if}>
+										<label for="fixed_tax_occupancy_based_off">{l s='No' mod='hotelreservationsystem'}</label>
+										<a class="slide-button btn"></a>
+									</span>
+								</div>
+							</div>
+							<div id="fixed_tax_occupancy_fields" {if isset($smarty.post.fixed_tax_occupancy_based)}{if !$smarty.post.fixed_tax_occupancy_based}style="display:none;"{/if}{elseif !isset($hotel_info) || !isset($hotel_info.fixed_tax_occupancy_based) || !$hotel_info.fixed_tax_occupancy_based}style="display:none;"{/if}>
+								<div class="form-group">
+									<label class="control-label col-lg-3">
+										<span>{l s='Apply On Child' mod='hotelreservationsystem'}</span>
+									</label>
+									<div class="col-lg-6">
+										<span class="switch prestashop-switch fixed-width-lg">
+											<input type="radio" value="1" id="fixed_tax_apply_on_child_on" name="fixed_tax_apply_on_child" {if isset($smarty.post.fixed_tax_apply_on_child)}{if $smarty.post.fixed_tax_apply_on_child}checked="checked"{/if}{elseif !isset($hotel_info) || !isset($hotel_info.fixed_tax_apply_on_child) || $hotel_info.fixed_tax_apply_on_child}checked="checked"{/if}>
+											<label for="fixed_tax_apply_on_child_on">{l s='Yes' mod='hotelreservationsystem'}</label>
+											<input type="radio" value="0" id="fixed_tax_apply_on_child_off" name="fixed_tax_apply_on_child" {if isset($smarty.post.fixed_tax_apply_on_child)}{if !$smarty.post.fixed_tax_apply_on_child}checked="checked"{/if}{elseif isset($hotel_info) && isset($hotel_info.fixed_tax_apply_on_child) && !$hotel_info.fixed_tax_apply_on_child}checked="checked"{/if}>
+											<label for="fixed_tax_apply_on_child_off">{l s='No' mod='hotelreservationsystem'}</label>
+											<a class="slide-button btn"></a>
+										</span>
+									</div>
+								</div>
+								<div class="form-group">
+									<label class="control-label col-lg-3">
+										<span>{l s='Apply On Infant' mod='hotelreservationsystem'}</span>
+									</label>
+									<div class="col-lg-6">
+										<span class="switch prestashop-switch fixed-width-lg">
+											<input type="radio" value="1" id="fixed_tax_apply_on_infant_on" name="fixed_tax_apply_on_infant" {if isset($smarty.post.fixed_tax_apply_on_infant)}{if $smarty.post.fixed_tax_apply_on_infant}checked="checked"{/if}{elseif isset($hotel_info) && isset($hotel_info.fixed_tax_apply_on_infant) && $hotel_info.fixed_tax_apply_on_infant}checked="checked"{/if}>
+											<label for="fixed_tax_apply_on_infant_on">{l s='Yes' mod='hotelreservationsystem'}</label>
+											<input type="radio" value="0" id="fixed_tax_apply_on_infant_off" name="fixed_tax_apply_on_infant" {if isset($smarty.post.fixed_tax_apply_on_infant)}{if !$smarty.post.fixed_tax_apply_on_infant}checked="checked"{/if}{elseif !isset($hotel_info) || !isset($hotel_info.fixed_tax_apply_on_infant) || !$hotel_info.fixed_tax_apply_on_infant}checked="checked"{/if}>
+											<label for="fixed_tax_apply_on_infant_off">{l s='No' mod='hotelreservationsystem'}</label>
+											<a class="slide-button btn"></a>
+										</span>
+									</div>
+								</div>
+							</div>
+						</div>	
+					{else}
+						<div class="alert alert-warning">
+							{l s='Please save hotel information before creating fixed taxes.' mod='hotelreservationsystem'}
+						</div>
+					{/if}
+
+					{hook h='displayAdminAddHotelFormFixedTaxesTabAfter' id_hotel=$hook_arg_id_hotel}
+				</div>
 				<div class="tab-pane" id="hotel-features">
 					{hook h='displayAdminAddHotelFormFeaturesTabBefore' id_hotel=$hook_arg_id_hotel}
 					{if isset($hotel_feature_tree)}
@@ -657,6 +771,20 @@
 			});
 		{/block}
 
+		$('input[name="fixed_tax_enabled"]').change(function(){
+			if ($('input[name="fixed_tax_enabled"]:checked').val() == 1) {
+				$('#fixed_tax_fields').show(200);
+			} else {
+				$('#fixed_tax_fields').hide(200);
+			}
+		});
+		$('input[name="fixed_tax_occupancy_based"]').change(function(){
+			if ($('input[name="fixed_tax_occupancy_based"]:checked').val() == 1) {
+				$('#fixed_tax_occupancy_fields').show(200);
+			} else {
+				$('#fixed_tax_occupancy_fields').hide(200);
+			}
+		});
 	});
 </script>
 {/block}

@@ -100,6 +100,9 @@ class OrderDetailControllerCore extends FrontController
                 $total_demands_price_ti = 0;
                 $total_convenience_fee_te = 0;
                 $total_convenience_fee_ti = 0;
+                $fixed_tax = 0;
+                $fixedTaxNames = array();
+                $fixedTaxHotels = array();
                 $roomTypes = array();
                 $objOrderReturn = new OrderReturn();
                 $refundedAmount = 0;
@@ -135,6 +138,14 @@ class OrderDetailControllerCore extends FrontController
 
                             $objBookingDemand = new HotelBookingDemands();
                             foreach ($order_bk_data as $data_k => $data_v) {
+                                $fixed_tax += HotelBranchInformation::calculateFixedTaxAmount((int)$data_v['id_hotel'], (float)$data_v['total_price_tax_excl'], $data_v['date_from'], $data_v['date_to'], (int)$data_v['adults'], (int)$data_v['children']);
+                                if (!isset($fixedTaxHotels[$data_v['id_hotel']])) {
+                                    $fixedTaxHotels[$data_v['id_hotel']] = HotelBranchInformation::getHtlFixedTax((int)$data_v['id_hotel'], (int)$this->context->language->id);
+                                }
+                                $fixedTaxInfo = $fixedTaxHotels[$data_v['id_hotel']];
+                                if (!empty($fixedTaxInfo['fixed_tax_enabled']) && !empty($fixedTaxInfo['fixed_tax_name'])) {
+                                    $fixedTaxNames[$fixedTaxInfo['fixed_tax_name']] = $fixedTaxInfo['fixed_tax_name'];
+                                }
                                 $date_join = strtotime($data_v['date_from']).strtotime($data_v['date_to']);
 
                                 $cartHotelData[$type_key]['adults'] = $data_v['adults'];
@@ -422,6 +433,15 @@ class OrderDetailControllerCore extends FrontController
                     }
                 }
 
+                $fixed_tax = Tools::ps_round((float)$fixed_tax, _PS_PRICE_COMPUTE_PRECISION_);
+                $fixed_tax_name = implode(', ', $fixedTaxNames);
+                $room_price_tax_excl = $order->getTotalProductsWithoutTaxes(false, true);
+                $room_price_tax_incl = $order->getTotalProductsWithTaxes(false, true);
+                $room_services_price_tax_excl = $order->getTotalProductsWithoutTaxes(false, false, Product::SELLING_PREFERENCE_WITH_ROOM_TYPE) + $total_demands_price_te;
+                $room_services_price_tax_incl = $order->getTotalProductsWithTaxes(false, false, Product::SELLING_PREFERENCE_WITH_ROOM_TYPE) + $total_demands_price_ti;
+                $total_standard_products_tax_excl = $order->getTotalProductsWithoutTaxes(false, false, Product::SELLING_PREFERENCE_STANDALONE) + $order->getTotalProductsWithoutTaxes(false, false, Product::SELLING_PREFERENCE_HOTEL_STANDALONE);
+                $total_standard_products_tax_incl = $order->getTotalProductsWithTaxes(false, false, Product::SELLING_PREFERENCE_STANDALONE) + $order->getTotalProductsWithTaxes(false, false, Product::SELLING_PREFERENCE_HOTEL_STANDALONE);
+                $total_tax_without_discount = ($room_price_tax_incl - $room_price_tax_excl) + ($room_services_price_tax_incl - $room_services_price_tax_excl) + ($total_standard_products_tax_incl - $total_standard_products_tax_excl) + $fixed_tax;
 
                 $this->context->smarty->assign(
                     array(
@@ -429,6 +449,9 @@ class OrderDetailControllerCore extends FrontController
                         'THEME_DIR' => _THEME_DIR_,
                         'total_convenience_fee_ti' => $total_convenience_fee_ti,
                         'total_convenience_fee_te' => $total_convenience_fee_te,
+                        'fixed_tax' => $fixed_tax,
+                        'fixed_tax_name' => $fixed_tax_name,
+                        'total_tax_without_discount' => $total_tax_without_discount,
                         'total_demands_price_ti' => $total_demands_price_ti,
                         'total_demands_price_te' => $total_demands_price_te,
                         'any_back_order' => $anyBackOrder,

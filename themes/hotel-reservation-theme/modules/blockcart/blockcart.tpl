@@ -142,6 +142,14 @@
 													</div>
 												{/if}
 											{/block}
+											{block name='blockcart_shopping_cart_total_fixed_tax'}
+												{if isset($fixed_tax) && $fixed_tax > 0}
+													<div class="cart-prices-line">
+														<span class="price pull-right ajax_cart_fixed_tax">{convertPrice price=$fixed_tax}</span>
+														<span>{if isset($fixed_tax_name) && $fixed_tax_name}{$fixed_tax_name|escape:'html':'UTF-8'}{else}{l s='Fixed Tax' mod='blockcart'}{/if}</span>
+													</div>
+												{/if}
+											{/block}
 											{block name='blockcart_shopping_cart_total_convenience_fee'}
 												{if isset($total_convenience_fee)}
 													<div class="cart-prices-line">
@@ -343,6 +351,14 @@
 							{/block}
 							{block name='blockcart_layer_cart_total_tax'}
 								{if $show_tax && $use_tax}
+									{if isset($fixed_tax)}
+										<div class="layer_cart_row">
+											<strong class="dark">
+												<span class="ajax_cart_fixed_tax_name">{if isset($fixed_tax_name) && $fixed_tax_name}{$fixed_tax_name|escape:'html':'UTF-8'}{else}{l s='Fixed Tax'}{/if}</span>
+											</strong>
+											<span class="price ajax_cart_fixed_tax pull-right">{displayPrice price=$fixed_tax}</span>
+										</div>
+									{/if}
 									<div class="layer_cart_row">
 										<strong class="dark">{l s='Tax' mod='blockcart'}</strong>
 										<span class="price cart_block_tax_cost ajax_cart_tax_cost pull-right">{$tax_cost}</span>

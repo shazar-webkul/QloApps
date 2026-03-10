@@ -659,6 +659,14 @@ class HTMLTemplateInvoiceCore extends HTMLTemplate
             $footer['total_convenience_fee_ti'] = $this->order->getTotalProductsWithTaxes(false, false, Product::SELLING_PREFERENCE_WITH_ROOM_TYPE, 1, Product::PRICE_ADDITION_TYPE_INDEPENDENT, $idsOrderDetail);
         }
 
+        $footer['fixed_tax'] = 0;
+        $footer['fixed_tax_name'] = '';
+        $cart = new Cart($this->order->id_cart);
+        if (Validate::isLoadedObject($cart)) {
+            $footer['fixed_tax'] = $cart->getFixedTaxForCart();
+            $footer['fixed_tax_name'] = $cart->getFixedTaxNameForCart($this->order->id_lang);
+        }
+
         $footer['total_paid_real'] = $this->order_invoice->getTotalPaid();
         $footer['total_without_discount_te'] = $footer['room_price_tax_excl'] + $footer['total_convenience_fee_te'] + $footer['additional_service_price_tax_excl'] + $footer['service_products_price_tax_excl'];
         $footer['total_without_discount_ti'] = $footer['room_price_tax_incl'] + $footer['total_convenience_fee_ti'] + $footer['additional_service_price_tax_incl'] + $footer['service_products_price_tax_incl'];

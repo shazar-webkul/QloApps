@@ -321,7 +321,9 @@
                                         {assign var=room_services_price_tax_excl value=($order->getTotalProductsWithoutTaxes(false, false, Product::SELLING_PREFERENCE_WITH_ROOM_TYPE) + $total_demands_price_te)}
                                         {assign var=room_services_price_tax_incl value=($order->getTotalProductsWithTaxes(false, false, Product::SELLING_PREFERENCE_WITH_ROOM_TYPE) + $total_demands_price_ti)}
 
-                                        {assign var=total_tax_without_discount value=(($room_price_tax_incl - $room_price_tax_excl) + ($room_services_price_tax_incl - $room_services_price_tax_excl ))}
+                                        {if !isset($total_tax_without_discount)}
+                                            {assign var=total_tax_without_discount value=(($room_price_tax_incl - $room_price_tax_excl) + ($room_services_price_tax_incl - $room_services_price_tax_excl ))}
+                                        {/if}
 
                                         {assign var=total_standard_products_tax_incl value=($order->getTotalProductsWithTaxes(false, false, Product::SELLING_PREFERENCE_STANDALONE) + $order->getTotalProductsWithTaxes(false, false, Product::SELLING_PREFERENCE_HOTEL_STANDALONE))}
                                         {assign var=total_standard_products_tax_excl value=($order->getTotalProductsWithoutTaxes(false, false, Product::SELLING_PREFERENCE_STANDALONE) + $order->getTotalProductsWithoutTaxes(false, false, Product::SELLING_PREFERENCE_HOTEL_STANDALONE))}
@@ -363,6 +365,14 @@
                                             </tr>
                                         {/if}
 
+                                        {if isset($fixed_tax) && $fixed_tax > 0}
+                                            <tr class="totalprice item">
+                                                <td>{if isset($fixed_tax_name) && $fixed_tax_name}{$fixed_tax_name|escape:'html':'UTF-8'}{else}{l s='Fixed Tax'}{/if}</td>
+                                                <td class="text-right">
+                                                    <span class="price">{displayWtPriceWithCurrency price=$fixed_tax currency=$currency}</span>
+                                                </td>
+                                            </tr>
+                                        {/if}
                                         <tr class="totalprice item">
                                             <td>{l s='Total Tax'}</td>
                                             <td class="text-right">
@@ -732,7 +742,9 @@
                                         {assign var=total_standard_products_tax_incl value=($order->getTotalProductsWithTaxes(false, false, Product::SELLING_PREFERENCE_STANDALONE) + $order->getTotalProductsWithTaxes(false, false, Product::SELLING_PREFERENCE_HOTEL_STANDALONE))}
                                         {assign var=total_standard_products_tax_excl value=($order->getTotalProductsWithoutTaxes(false, false, Product::SELLING_PREFERENCE_STANDALONE) + $order->getTotalProductsWithoutTaxes(false, false, Product::SELLING_PREFERENCE_HOTEL_STANDALONE))}
 
-                                        {assign var=total_tax_without_discount value=(($room_price_tax_incl - $room_price_tax_excl) + ($room_services_price_tax_incl - $room_services_price_tax_excl) + ($total_standard_products_tax_incl - $total_standard_products_tax_excl))}
+                                        {if !isset($total_tax_without_discount)}
+                                            {assign var=total_tax_without_discount value=(($room_price_tax_incl - $room_price_tax_excl) + ($room_services_price_tax_incl - $room_services_price_tax_excl) + ($total_standard_products_tax_incl - $total_standard_products_tax_excl))}
+                                        {/if}
 
                                         {if isset($cart_htl_data) && $cart_htl_data}
                                             <tr>
@@ -772,6 +784,14 @@
                                             </tr>
                                         {/if}
 
+                                        {if isset($fixed_tax) && $fixed_tax > 0}
+                                            <tr class="totalprice item">
+                                                <td>{if isset($fixed_tax_name) && $fixed_tax_name}{$fixed_tax_name|escape:'html':'UTF-8'}{else}{l s='Fixed Tax'}{/if}</td>
+                                                <td class="text-right">
+                                                    <span class="price">{displayWtPriceWithCurrency price=$fixed_tax currency=$currency}</span>
+                                                </td>
+                                            </tr>
+                                        {/if}
                                         <tr class="totalprice item">
                                             <td>{l s='Total Tax'}</td>
                                             <td class="text-right">

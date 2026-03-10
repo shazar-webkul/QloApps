@@ -757,7 +757,22 @@
 		$('#total_convenience_fees').html(formatCurrency(parseFloat(jsonSummary.summary.convenience_fee), currency_format, currency_sign, currency_blank));
 		$('#total_without_taxes').html(formatCurrency(parseFloat(jsonSummary.summary.cart_total_without_discount_te), currency_format, currency_sign, currency_blank));
 		// $('#total_service_products').html(formatCurrency(parseFloat(jsonSummary.summary.total_service_products), currency_format, currency_sign, currency_blank));
-		$('#total_taxes').html(formatCurrency(parseFloat(jsonSummary.summary.total_tax_without_discount), currency_format, currency_sign, currency_blank));
+		var fixedTax = parseFloat(jsonSummary.summary.fixed_tax || 0);
+		var totalTaxes = parseFloat(jsonSummary.summary.total_tax_without_discount || 0);
+		var otherTaxes = totalTaxes - fixedTax;
+		if (otherTaxes < 0) {
+			otherTaxes = 0;
+		}
+		$('#total_taxes').html(formatCurrency(otherTaxes, currency_format, currency_sign, currency_blank));
+		if (fixedTax > 0) {
+			var defaultFixedTaxLabel = $('#fixed_tax_name').data('default-label');
+			var fixedTaxLabel = (jsonSummary.summary.fixed_tax_name && jsonSummary.summary.fixed_tax_name.length) ? jsonSummary.summary.fixed_tax_name : defaultFixedTaxLabel;
+			$('#fixed_tax_name').text(fixedTaxLabel);
+			$('#total_fixed_tax').html(formatCurrency(fixedTax, currency_format, currency_sign, currency_blank));
+			$('#fixed_tax_block').show();
+		} else {
+			$('#fixed_tax_block').hide();
+		}
 		$('#total_with_taxes').html(formatCurrency(parseFloat(jsonSummary.summary.total_price), currency_format, currency_sign, currency_blank));
 
 		$('#payment_amount').val(jsonSummary.summary.total_price);
@@ -1267,7 +1282,22 @@
 		shipping_price_selected_carrier = jsonSummary.summary.total_shipping;
 
 		$('#total_vouchers').html(formatCurrency(parseFloat(jsonSummary.summary.total_discounts), currency_format, currency_sign, currency_blank));
-		$('#total_taxes').html(formatCurrency(parseFloat(jsonSummary.summary.total_tax_without_discount), currency_format, currency_sign, currency_blank));
+		var fixedTax = parseFloat(jsonSummary.summary.fixed_tax || 0);
+		var totalTaxes = parseFloat(jsonSummary.summary.total_tax_without_discount || 0);
+		var otherTaxes = totalTaxes - fixedTax;
+		if (otherTaxes < 0) {
+			otherTaxes = 0;
+		}
+		$('#total_taxes').html(formatCurrency(otherTaxes, currency_format, currency_sign, currency_blank));
+		if (fixedTax > 0) {
+			var defaultFixedTaxLabel = $('#fixed_tax_name').data('default-label');
+			var fixedTaxLabel = (jsonSummary.summary.fixed_tax_name && jsonSummary.summary.fixed_tax_name.length) ? jsonSummary.summary.fixed_tax_name : defaultFixedTaxLabel;
+			$('#fixed_tax_name').text(fixedTaxLabel);
+			$('#total_fixed_tax').html(formatCurrency(fixedTax, currency_format, currency_sign, currency_blank));
+			$('#fixed_tax_block').show();
+		} else {
+			$('#fixed_tax_block').hide();
+		}
 		$('#total_without_taxes').html(formatCurrency(parseFloat(jsonSummary.summary.cart_total_without_discount_te), currency_format, currency_sign, currency_blank));
 		$('#total_with_taxes').html(formatCurrency(parseFloat(jsonSummary.summary.total_price), currency_format, currency_sign, currency_blank));
 		$('#total_rooms').html(formatCurrency(parseFloat(jsonSummary.summary.total_rooms_with_services_without_discount_te), currency_format, currency_sign, currency_blank));
@@ -2294,6 +2324,10 @@
 						<div class="data-focus">
 							<span>{l s='Total taxes'}</span><br/>
 							<span id="total_taxes" class="size_l"></span>
+							<div id="fixed_tax_block" style="display:none;">
+								<span id="fixed_tax_name" data-default-label="{l s='Fixed Tax'|escape:'html':'UTF-8'}" class="text-muted">{l s='Fixed Tax'}</span><br/>
+								<span id="total_fixed_tax" class="size_l"></span>
+							</div>
 						</div>
 					</div>
                     <div class="col-lg-2">

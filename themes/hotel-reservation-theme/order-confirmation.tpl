@@ -473,6 +473,16 @@
 																</td>
 															</tr>
 														{/if}
+														{if isset($orderTotalInfo['fixed_tax']) && $orderTotalInfo['fixed_tax'] > 0}
+															<tr class="item">
+																<td>
+																	<strong>{if isset($orderTotalInfo['fixed_tax_name']) && $orderTotalInfo['fixed_tax_name']}{$orderTotalInfo['fixed_tax_name']|escape:'html':'UTF-8'}{else}{l s='Fixed Tax'}{/if}</strong>
+																</td>
+																<td class="text-right">
+																	<span class="price-discount">{displayWtPriceWithCurrency price=$orderTotalInfo['fixed_tax'] currency=$objOrderCurrency convert=1}</span>
+																</td>
+															</tr>
+														{/if}
 														<tr class="item">
 															<td>
 																<strong>{l s='Total Tax'}</strong>

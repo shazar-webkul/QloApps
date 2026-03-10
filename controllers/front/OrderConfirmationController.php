@@ -135,6 +135,8 @@ class OrderConfirmationControllerCore extends FrontController
             $orderTotalInfo['total_paid_real'] = 0;
             $orderTotalInfo['total_wrapping'] = 0;
             $orderTotalInfo['total_order_amount'] = 0;
+            $orderTotalInfo['fixed_tax'] = 0;
+            $orderTotalInfo['fixed_tax_name'] = '';
 
             $orders_has_invoice = 1;
             if ($cartOrders = Order::getAllOrdersByCartId($order->id_cart)) {
@@ -439,6 +441,14 @@ class OrderConfirmationControllerCore extends FrontController
                 $totalTaxExcl = $orderTotalInfo['total_rooms_te'] + $orderTotalInfo['total_services_te'] + $orderTotalInfo['total_convenience_fee_te'] + $orderTotalInfo['total_auto_add_services_te'] + $orderTotalInfo['total_demands_price_te'] + $orderTotalInfo['total_standalone_products_te'];
 
                 $orderTotalInfo['total_tax_without_discount'] = $totalTaxIncl - $totalTaxExcl;
+            }
+
+            if (Validate::isLoadedObject($cart)) {
+                $orderTotalInfo['fixed_tax'] = $cart->getFixedTaxForCart();
+                $orderTotalInfo['fixed_tax_name'] = $cart->getFixedTaxNameForCart($this->context->language->id);
+                if ($orderTotalInfo['fixed_tax'] > 0) {
+                    $orderTotalInfo['total_tax_without_discount'] += $orderTotalInfo['fixed_tax'];
+                }
             }
 
             $this->context->smarty->assign('orderTotalInfo', $orderTotalInfo);

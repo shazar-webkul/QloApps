@@ -366,6 +366,8 @@ class Blockcart extends Module
         $totalConvenienceFee = $params['cart']->getOrderTotal($useTax, Cart::ONLY_CONVENIENCE_FEE);
         $totalRoomsPrice = $params['cart']->getOrderTotal($useTax, Cart::ONLY_ROOMS);
         $totalNormalProductPrice = $params['cart']->getOrderTotal($useTax, Cart::ONLY_STANDALONE_PRODUCTS);
+        $fixed_tax = $params['cart']->getFixedTaxForCart();
+        $fixed_tax_name = $params['cart']->getFixedTaxNameForCart($this->context->language->id);
 
         $response = array(
             'products' => $products,
@@ -399,6 +401,9 @@ class Blockcart extends Module
             'last_added_product' => $addedProduct,
             // 'cart_booking_data' => $htlCartData,
             'total_rooms_in_cart' => $totalRooms,
+            'fixed_tax' => $fixed_tax,
+            'fixed_tax_name' => $fixed_tax_name,
+            'fixed_tax_format' => Tools::displayPrice($fixed_tax, $currency)
         );
 
         if (isset($params['cookie']->avail_rooms)) {

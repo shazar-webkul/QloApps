@@ -116,6 +116,16 @@
 		</td>
 	</tr>
 	{/if}
+	{if isset($footer.fixed_tax) && $footer.fixed_tax > 0}
+		<tr class="bold">
+			<td class="grey">
+				{if isset($footer.fixed_tax_name) && $footer.fixed_tax_name}{$footer.fixed_tax_name|escape:'html':'UTF-8'}{else}{l s='Fixed Tax' pdf='true'}{/if}
+			</td>
+			<td class="white">
+				{displayPrice currency=$order->id_currency price=$footer.fixed_tax}
+			</td>
+		</tr>
+	{/if}
 
 	{if $footer.product_discounts_tax_incl > 0}
 		<tr class="bold">
