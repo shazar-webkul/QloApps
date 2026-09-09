@@ -1797,7 +1797,7 @@ class AdminControllerCore extends Controller
         $this->initTabModuleList();
         $this->addPageHeaderToolBarModulesListButton();
 
-        $this->context->smarty->assign('help_link', 'https://docs.qloapps.com');
+        $this->context->smarty->assign('help_link', 'https://webkul.uvdesk.com/en/customer/create-ticket/');
     }
 
     /**
@@ -2515,7 +2515,7 @@ class AdminControllerCore extends Controller
             'check_url_fopen' => (ini_get('allow_url_fopen') ? 'ok' : 'ko'),
             'check_openssl' => (extension_loaded('openssl') ? 'ok' : 'ko'),
             'add_permission' => 1,
-            'addons_register_link' => 'https://qloapps.com/addons/'
+            'addons_register_link' => 'https://store.webkul.com/customer/account/login'
         ));
 
         //Force override translation key

@@ -44,7 +44,7 @@
 						</form>
 					</div>
 					<div class="col-lg-3 col-md-4 col-sm-5 col-xs-12 addons-see-all-themes">
-						{l s='Or'}<a href="https://qloapps.com/addons/" class="btn btn-primary" onclick="return !window.open(this.href)p">{l s='See all themes'}</a>
+						{l s='Or'}<a href="https://store.webkul.com/Qloapps/responsive.html" class="btn btn-primary" onclick="return !window.open(this.href)p">{l s='See all themes'}</a>
 					</div>
 				</div>
 			</div>

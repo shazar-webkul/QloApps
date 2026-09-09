@@ -36,7 +36,7 @@
 				<div class="panel">
 					<div class="row">
 						<div class="col-lg-4 col-lg-offset-1 col-md-4 col-sm-7 col-xs-12 addons-style-search-bar">
-							<form id="addons-search-form" method="get" action="https://qloapps.com/addons/" class="float">
+							<form id="addons-search-form" method="get" action="https://store.webkul.com/Qloapps.html" class="float">
 							<label>{l s='Search for QloApps Addons:'}</label>
 							<div class="input-group">
 								<input id="addons-search-box" class="form-control" type="text" autocomplete="off" name="query" value="" placeholder="Search for QloApps Addons">
@@ -47,7 +47,7 @@
 							</form>
 						</div>
 						<div class="col-lg-3 col-md-4 col-sm-5 col-xs-12 addons-see-all-themes">
-							{l s='Or'}<a href="https://qloapps.com/addons/" class="btn btn-primary" onclick="return !window.open(this.href)">{l s='See all modules'}</a>
+							{l s='Or'}<a href="https://store.webkul.com/Qloapps.html" class="btn btn-primary" onclick="return !window.open(this.href)">{l s='See all modules'}</a>
 						</div>
 					</div>
 				</div>

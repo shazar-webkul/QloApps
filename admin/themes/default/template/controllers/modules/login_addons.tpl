@@ -37,7 +37,7 @@
 			<!--start addons login-->
 			<form id="addons_login_form" method="post" >
 				<div>
-					<h3 class="text-center">{l s="Connect your shop with QloApps Addons in order to automatically import all your Addons purchases."}<a class="btn btn-default _blank" href="{$addons_register_link|escape:'html':'UTF-8'}">{l s='QloApps addons'}</a></h3>
+					<h3 class="text-center">{l s="Connect your hotel with QloApps Addons in order to automatically import all your Addons purchases."}<a class="btn btn-default _blank" href="{$addons_register_link|escape:'html':'UTF-8'}">{l s='QloApps addons'}</a></h3>
 					<hr />
 				</div>
 				<div class="row">
