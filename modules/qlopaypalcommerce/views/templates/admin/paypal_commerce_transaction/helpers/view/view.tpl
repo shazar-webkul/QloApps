@@ -1,10 +1,10 @@
 {**
 * NOTICE OF LICENSE
 *
-* This source file is subject to the Open Software License version 3.0
+* This source file is subject to the Academic Free License (AFL 3.0)
 * that is bundled with this package in the file LICENSE.md
 * It is also available through the world-wide-web at this URL:
-* https://opensource.org/license/osl-3-0-php
+* https://opensource.org/licenses/afl-3.0.php
 * If you did not receive a copy of the license and are unable to
 * obtain it through the world-wide-web, please send an email
 * to support@qloapps.com so we can send you a copy immediately.
@@ -17,7 +17,7 @@
 *
 * @author Webkul IN
 * @copyright Since 2010 Webkul
-* @license https://opensource.org/license/osl-3-0-php Open Software License version 3.0
+* @license https://opensource.org/licenses/afl-3.0.php Academic Free License 3.0
 *}
 
 <div class="panel col-lg-12">
@@ -56,9 +56,14 @@
                         <td class="col-sm-10">{$transaction_data.pp_paid_total_formated|escape:'html':'UTF-8'}</td>
                     </tr>
                     <tr class="row">
-                        <th class="col-sm-2"><strong>{l s='QloApps Order Reference' mod='qlopaypalcommerce'}</strong></th>
+                        <th class="col-sm-2"><strong>{l s='Order Reference' mod='qlopaypalcommerce'}</strong></th>
                         <td class="col-sm-10">
                             {$transaction_data.order_reference|escape:'html':'UTF-8'}
+                            {if $order_links}
+                                {foreach from=$order_links item=order name=foo}
+                                    <a target="_blank" href="{$order.link|escape:'html':'UTF-8'}">#{$order.id_order|escape:'html':'UTF-8'}</a>{if not $smarty.foreach.foo.last}, {/if}
+                                {/foreach}
+                            {/if}
                         </td>
                     </tr>
                     <tr class="row">
@@ -107,7 +112,7 @@
 {if $transaction_data and $transaction_data.pp_payment_status == 'COMPLETED'}
     {* show refund form only if there is any remaing amount for refund *}
     {if $remaining_refund > 0}
-        <form action="{$transaction_url|escape:'html':'UTF-8'}" method="post" class="form-horizontal" id="refund_form">
+        <form action="" method="post" class="form-horizontal" id="refund_form">
             <div class="panel col-lg-12">
                 <div class="panel-heading">
                     <i class="icon-reply"></i>
@@ -176,8 +181,8 @@
                         <th style="text-align: center">{l s='Amount' mod='qlopaypalcommerce'}</th>
                         <th style="text-align: center">{l s='Type' mod='qlopaypalcommerce'}</th>
                         <th style="text-align: center">{l s='Status' mod='qlopaypalcommerce'}</th>
-                        <th style="text-align: center">{l s='Remark' mod='qlopaypalcommerce'}</th>
                         <th style="text-align: center">{l s='Date' mod='qlopaypalcommerce'}</th>
+                        <th style="text-align: center">{l s='Remark' mod='qlopaypalcommerce'}</th>
                     </tr>
                     {if $refund_data}
                         {foreach $refund_data as $key => $refund}
@@ -198,8 +203,8 @@
                                         <label class="label label-danger">{$refund.refund_status|escape:'html':'UTF-8'}</label>
                                     {/if}
                                 </td>
-                                <td style="text-align: center">{$refund.refund_reason|escape:'html':'UTF-8'}</td>
                                 <td style="text-align: center">{$refund.date_add|escape:'html':'UTF-8'}</td>
+                                <td style="text-align: center">{$refund.refund_reason|escape:'html':'UTF-8'}</td>
                             </tr>
                         {/foreach}
                     {else}

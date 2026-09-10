@@ -2,10 +2,10 @@
 /**
 * NOTICE OF LICENSE
 *
-* This source file is subject to the Open Software License version 3.0
+* This source file is subject to the Academic Free License (AFL 3.0)
 * that is bundled with this package in the file LICENSE.md
 * It is also available through the world-wide-web at this URL:
-* https://opensource.org/license/osl-3-0-php
+* https://opensource.org/licenses/afl-3.0.php
 * If you did not receive a copy of the license and are unable to
 * obtain it through the world-wide-web, please send an email
 * to support@qloapps.com so we can send you a copy immediately.
@@ -18,7 +18,7 @@
 *
 * @author Webkul IN
 * @copyright Since 2010 Webkul
-* @license https://opensource.org/license/osl-3-0-php Open Software License version 3.0
+* @license https://opensource.org/licenses/afl-3.0.php Academic Free License 3.0
 */
 
 class WkPaypalCommerceWebhook
@@ -52,7 +52,7 @@ class WkPaypalCommerceWebhook
         if (isset($eventData['resource']['note_to_payer'])) {
             $refundObj->refund_reason = $eventData['resource']['note_to_payer'];
         }
-        $refundObj->response = json_encode($eventData);
+        $refundObj->response = Tools::jsonEncode($eventData);
         $refundObj->refund_status = $eventData['resource']['status'];
         $refundObj->save();
     }
@@ -192,7 +192,7 @@ class WkPaypalCommerceWebhook
         return Db::getInstance()->execute(
             'UPDATE `'._DB_PREFIX_.'wk_paypal_commerce_order`
             SET `pp_payment_status` = "'.pSQL($payment_status).'",
-            `response` = "'.pSQL(json_encode($orderData)).'"
+            `response` = "'.pSQL(Tools::jsonEncode($orderData)).'"
             WHERE `pp_transaction_id` = "'.pSQL($transaction_id).'"
             '
         );

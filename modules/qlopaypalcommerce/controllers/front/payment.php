@@ -2,10 +2,10 @@
 /**
 * NOTICE OF LICENSE
 *
-* This source file is subject to the Open Software License version 3.0
+* This source file is subject to the Academic Free License (AFL 3.0)
 * that is bundled with this package in the file LICENSE.md
 * It is also available through the world-wide-web at this URL:
-* https://opensource.org/license/osl-3-0-php
+* https://opensource.org/licenses/afl-3.0.php
 * If you did not receive a copy of the license and are unable to
 * obtain it through the world-wide-web, please send an email
 * to support@qloapps.com so we can send you a copy immediately.
@@ -18,7 +18,7 @@
 *
 * @author Webkul IN
 * @copyright Since 2010 Webkul
-* @license https://opensource.org/license/osl-3-0-php Open Software License version 3.0
+* @license https://opensource.org/licenses/afl-3.0.php Academic Free License 3.0
 */
 
 class QloPaypalCommercePaymentModuleFrontController extends ModuleFrontController
@@ -69,7 +69,7 @@ class QloPaypalCommercePaymentModuleFrontController extends ModuleFrontControlle
             switch ($action) {
                 case 1:
                     $json = Tools::file_get_contents('php://input');
-                    $orderDetails = json_decode($json, true);
+                    $orderDetails = Tools::jsonDecode($json, true);
 
                     $cart = $this->context->cart;
 
@@ -86,23 +86,23 @@ class QloPaypalCommercePaymentModuleFrontController extends ModuleFrontControlle
 
                     // create order
                     $orderDetails['original'] = $this->getOrderDetails();
-                    WkPaypalCommerceHelper::logMsg('payment', json_encode($orderDetails));
+                    WkPaypalCommerceHelper::logMsg('payment', Tools::jsonEncode($orderDetails));
 
                     $ppOrderData = $ppCommerce->orders->create($orderDetails);
 
                     WkPaypalCommerceHelper::logMsg('payment', 'Payment response data: ', true);
-                    WkPaypalCommerceHelper::logMsg('payment', json_encode($ppOrderData));
+                    WkPaypalCommerceHelper::logMsg('payment', Tools::jsonEncode($ppOrderData));
 
-                    die(json_encode($ppOrderData));
+                    die(Tools::jsonEncode($ppOrderData));
                 case 2:
                     $json = Tools::file_get_contents('php://input');
-                    $orderData = json_decode($json, true);
+                    $orderData = Tools::jsonDecode($json, true);
 
                     if ($orderData['orderID'] && $orderData['getOrderData']) {
                         $ppCommerce = new PayPalCommerce();
                         $returnData = $ppCommerce->orders->capture($orderData['orderID']);
                         header('Content-Type: application/json');
-                        echo json_encode($returnData['data']);
+                        echo Tools::jsonEncode($returnData['data']);
                         die;
                     } elseif (Tools::getIsset('order_id')) {
                         $orderID = Tools::getValue('order_id');
@@ -116,15 +116,24 @@ class QloPaypalCommercePaymentModuleFrontController extends ModuleFrontControlle
                         WkPaypalCommerceHelper::logMsg('payment', 'Customer ID: '. $cart->id_customer);
                         WkPaypalCommerceHelper::logMsg('payment', 'Currency ID: '. $cart->id_currency);
                         WkPaypalCommerceHelper::logMsg('payment', 'Cart Total: '. $cart->getOrderTotal(true, Cart::BOTH));
-                        WkPaypalCommerceHelper::logMsg('payment', json_encode($returnData));
+                        WkPaypalCommerceHelper::logMsg('payment', Tools::jsonEncode($returnData));
 
                         if (isset($returnData['data']['id']) && !empty($returnData['data']['id'])) {
                             // Payment success
                             $paypalOrderID = $returnData['data']['id'];
 
-                            // Save order data
-                            $transaction_id = $this->saveOrderData($returnData);
-                            if ($paypalOrderID) {
+                            $paymentStatus = '';
+
+                            if (isset($returnData['data']['purchase_units'][0]['payments']['captures'][0]['status'])) {
+                                $paymentStatus = $returnData['data']['purchase_units'][0]['payments']['captures'][0]['status'];
+                            }
+
+                            $paypalOrderCartId = isset($returnData['data']['purchase_units'][0]['custom_id']) ? $returnData['data']['purchase_units'][0]['custom_id'] : null;
+                            $belongsToCurrentCart = ((int) $paypalOrderCartId === (int) $cart->id);
+
+                            if ($paypalOrderID && $paymentStatus == 'COMPLETED' && $belongsToCurrentCart) {
+                                // Save order data
+                                $this->saveOrderData($returnData);
                                 $currency = $this->context->currency;
                                 // Order status/amount must reflect what PayPal actually captured,
                                 // not the cart's is_advance_payment flag (still editable by the
@@ -143,7 +152,11 @@ class QloPaypalCommercePaymentModuleFrontController extends ModuleFrontControlle
                                     $orderStatus = Configuration::get('PS_OS_AWAITING_PAYMENT');
                                 }
 
-                                $extraVars['transaction_id'] = $transaction_id;
+                                $transactionId = '';
+                                if (isset($returnData['data']['purchase_units'][0]['payments']['captures'][0]['id'])) {
+                                    $transactionId = $returnData['data']['purchase_units'][0]['payments']['captures'][0]['id'];
+                                }
+                                $extraVars = array('transaction_id' => $transactionId);
                                 // create order for the payment
                                 $this->module->validateOrder(
                                     $cart->id,
@@ -181,6 +194,12 @@ class QloPaypalCommercePaymentModuleFrontController extends ModuleFrontControlle
                                 );
                                 Tools::redirect($orderLink);
                             } else {
+                                if ($paypalOrderID && $paymentStatus == 'COMPLETED' && !$belongsToCurrentCart) {
+                                    WkPaypalCommerceHelper::logMsg(
+                                        'payment',
+                                        'PayPal order/cart mismatch. Expected cart: '.$cart->id.', PayPal custom_id: '.$paypalOrderCartId
+                                    );
+                                }
                                 WkPaypalCommerceHelper::logMsg('payment', 'Payment status'. $returnData['data']['status']);
                                 WkPaypalCommerceHelper::logMsg('payment', '--------------', true);
                                 Tools::redirect('index.php?controller=order&step=1');
@@ -210,7 +229,7 @@ class QloPaypalCommercePaymentModuleFrontController extends ModuleFrontControlle
                     break;
                 case 3:
                     WkPaypalCommerceHelper::logMsg('payment', 'Payment cancelled by customer...', true);
-                    WkPaypalCommerceHelper::logMsg('payment', json_encode(Tools::getAllValues()));
+                    WkPaypalCommerceHelper::logMsg('payment', Tools::jsonEncode(Tools::getAllValues()));
                     WkPaypalCommerceHelper::logMsg('payment', '--------------', true);
 
                     Tools::redirect($this->context->link->getPageLink('order-opc', true, null).'?pp_cancel=1');
@@ -226,7 +245,6 @@ class QloPaypalCommercePaymentModuleFrontController extends ModuleFrontControlle
     // Save order data
     private function saveOrderData($orderData)
     {
-        $transaction_id = '';
         if ($orderData) {
             $purchaseUnits = $orderData['data']['purchase_units'];
             foreach ($purchaseUnits as $purchase) {
@@ -261,13 +279,15 @@ class QloPaypalCommercePaymentModuleFrontController extends ModuleFrontControlle
                 $orderObj->pp_order_id = $orderData['data']['id'];
                 $orderObj->pp_transaction_id = $transaction_id;
                 $orderObj->pp_payment_status = $payment_status;
-                $orderObj->response = json_encode($orderData);
+                $orderObj->response = Tools::jsonEncode($orderData);
                 $orderObj->order_date = date('Y-m-d H:i:s');
                 $orderObj->save();
             }
+
+            return true;
         }
 
-        return $transaction_id;
+        return false;
     }
 
     // Create order data to send to PayPal
@@ -339,27 +359,27 @@ class QloPaypalCommercePaymentModuleFrontController extends ModuleFrontControlle
 
         $orderData['purchase_units'][0]['amount'] = array(
             'currency_code' => $currency['iso_code'],
-            'value' => Tools::ps_round($cartTotalAmountTI, 2),
+            'value' => (string) Tools::ps_round($cartTotalAmountTI, 2),
             'breakdown' => array(
                 'item_total' => array(
                     'currency_code' => $currency['iso_code'],
-                    'value' => Tools::ps_round($itemTotalAmountTE, 2),
+                    'value' => (string) Tools::ps_round($itemTotalAmountTE, 2),
                 ),
                 'shipping' => array(
                     'currency_code' => $currency['iso_code'],
-                    'value' => 0,
+                    'value' => (string) 0,
                 ),
                 'shipping_discount' => array(
                     'currency_code' => $currency['iso_code'],
-                    'value' => 0,
+                    'value' => (string) 0,
                 ),
                 'tax_total' => array(
                     'currency_code' => $currency['iso_code'],
-                    'value' => Tools::ps_round(($itemTotalAmountTI - $itemTotalAmountTE), 2),
+                    'value' => (string) Tools::ps_round(($itemTotalAmountTI - $itemTotalAmountTE), 2),
                 ),
                 'discount' => array(
                     'currency_code' => $currency['iso_code'],
-                    'value' => Tools::ps_round($discountTI, 2),
+                    'value' => (string) Tools::ps_round($discountTI, 2),
                 ),
             )
         );
@@ -368,8 +388,10 @@ class QloPaypalCommercePaymentModuleFrontController extends ModuleFrontControlle
         // $items = $ppHelper->getPaypalOrderItemDetails($cart->id);
         // $orderData['purchase_units'][0]['items'] = array_values($items);
 
+        $wkEnvironment = Configuration::get('WK_PAYPAL_COMMERCE_PAYMENT_MODE');
+        $merchantId = ($wkEnvironment == QloPaypalCommerce::WK_PAYPAL_COMMERCE_PAYMENT_MODE_PRODUCTION) ? Configuration::get('WK_PAYPAL_COMMERCE_LIVE_MERCHANT_ID') : Configuration::get('WK_PAYPAL_COMMERCE_SANDBOX_MERCHANT_ID');
         $orderData['purchase_units'][0]['payee'] = array(
-            'merchant_id' => Configuration::get('WK_PAYPAL_COMMERCE_MERCHANT_ID')
+            'merchant_id' => $merchantId
         );
 
         $orderData['application_context'] = array(

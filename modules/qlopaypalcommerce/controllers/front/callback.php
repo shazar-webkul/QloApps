@@ -2,10 +2,10 @@
 /**
 * NOTICE OF LICENSE
 *
-* This source file is subject to the Open Software License version 3.0
+* This source file is subject to the Academic Free License (AFL 3.0)
 * that is bundled with this package in the file LICENSE.md
 * It is also available through the world-wide-web at this URL:
-* https://opensource.org/license/osl-3-0-php
+* https://opensource.org/licenses/afl-3.0.php
 * If you did not receive a copy of the license and are unable to
 * obtain it through the world-wide-web, please send an email
 * to support@qloapps.com so we can send you a copy immediately.
@@ -18,7 +18,7 @@
 *
 * @author Webkul IN
 * @copyright Since 2010 Webkul
-* @license https://opensource.org/license/osl-3-0-php Open Software License version 3.0
+* @license https://opensource.org/licenses/afl-3.0.php Academic Free License 3.0
 */
 
 class QloPaypalCommerceCallbackModuleFrontController extends ModuleFrontController
@@ -44,25 +44,25 @@ class QloPaypalCommerceCallbackModuleFrontController extends ModuleFrontControll
         }
 
         if ($json) {
-            $payload['webhook_event'] = json_decode($json, true);
+            $payload['webhook_event'] = Tools::jsonDecode($json, true);
         }
 
         if ($payload) {
             WkPaypalCommerceHelper::logMsg('webhook', 'Webhook initiated...', true);
             WkPaypalCommerceHelper::logMsg('webhook', 'Environment: '. Configuration::get('WK_PAYPAL_COMMERCE_PAYMENT_MODE'));
             WkPaypalCommerceHelper::logMsg('webhook', 'Webhook payload data: ');
-            WkPaypalCommerceHelper::logMsg('webhook', json_encode($payload));
+            WkPaypalCommerceHelper::logMsg('webhook', Tools::jsonEncode($payload));
             WkPaypalCommerceHelper::logMsg('webhook', 'Validating webhook signature...');
 
             $validateSig = WkPaypalCommerceHelper::validateWebhookSig($payload);
 
             WkPaypalCommerceHelper::logMsg('webhook', 'Webhook respose data: ');
-            WkPaypalCommerceHelper::logMsg('webhook', json_encode($validateSig));
+            WkPaypalCommerceHelper::logMsg('webhook', Tools::jsonEncode($validateSig));
 
             if (isset($validateSig['verification_status'])
                 && $validateSig['verification_status'] == 'SUCCESS'
             ) {
-                $eventData = json_decode($json, true);
+                $eventData = Tools::jsonDecode($json, true);
                 $objWebhook = new WkPaypalCommerceWebhook();
                 switch ($eventData['event_type']) {
                     case 'CHECKOUT.ORDER.APPROVED':
