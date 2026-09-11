@@ -377,7 +377,7 @@ class AdminThemesControllerCore extends AdminController
                 'label' => $this->l('Name of the theme\'s directory'),
                 'name' => 'directory',
                 'required' => true,
-                'hint' => $this->l('If the directory does not exist, PrestaShop will create it automatically.'),
+                'hint' => $this->l('If the directory does not exist, QloApps will create it automatically.'),
             );
 
             $theme_query = Theme::getThemes();
