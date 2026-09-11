@@ -77,7 +77,7 @@
 	{if isset($footer.additional_service_price_tax_excl) && $footer.additional_service_price_tax_excl}
 		<tr>
 			<td class="grey" width="70%">
-				{l s='Additional service Tax' pdf='true'}
+				{l s='Extra services Tax' pdf='true'}
 			</td>
 			<td class="white" width="30%">
 				{displayPrice currency=$order->id_currency price=($footer.additional_service_price_tax_incl - $footer.additional_service_price_tax_excl)}
@@ -109,10 +109,20 @@
 	{if $footer.total_tax_without_discount > 0}
 	<tr class="bold">
 		<td class="grey">
-			{l s='Total Tax' pdf='true'}
+			{l s='Room and Service Tax' pdf='true'}
 		</td>
 		<td class="white">
 			{displayPrice currency=$order->id_currency price=$footer.total_tax_without_discount}
+		</td>
+	</tr>
+	{/if}
+	{if isset($footer.total_tourism_tax) && $footer.total_tourism_tax > 0}
+	<tr>
+		<td class="grey">
+			{l s='Total Tourism Tax' pdf='true'}
+		</td>
+		<td class="white">
+			{displayPrice currency=$order->id_currency price=$footer.total_tourism_tax}
 		</td>
 	</tr>
 	{/if}

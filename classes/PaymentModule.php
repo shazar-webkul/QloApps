@@ -357,6 +357,13 @@ abstract class PaymentModuleCore extends Module
                         $order->source = Configuration::get('PS_SHOP_DOMAIN');
                     }
 
+                    // Booking Source (business categorization, e.g. Direct Website/Walk-in/OTA) —
+                    if (isset($this->idBookingSource) && $this->idBookingSource) {
+                        $order->id_source = (int)$this->idBookingSource;
+                    } else {
+                        $order->id_source = (int)Source::getDefaultSourceId();
+                    }
+
                     if (self::DEBUG_MODE) {
                         PrestaShopLogger::addLog('PaymentModule::validateOrder - Order is about to be added', 1, null, 'Cart', (int)$id_cart, true);
                     }
@@ -510,6 +517,7 @@ abstract class PaymentModuleCore extends Module
             $objMail = new Mail();
             $objServiceProductCartDetail = new ServiceProductCartDetail();
             $cart_rules = $this->context->cart->getCartRules();
+            $useTourismTax = (bool) Configuration::get('QLO_USE_TOURISM_TAX');
             foreach ($order_detail_list as $key => $order_detail) {
                 /** @var OrderDetail $order_detail */
 
@@ -913,64 +921,37 @@ abstract class PaymentModuleCore extends Module
                                         );
                                     }
                                 }
-                                if ($objBookingDetail->save()) {
-                                    // save extra demands info
-                                    if ($objCartBookingData->extra_demands
-                                        && ($extraDemands = json_decode($objCartBookingData->extra_demands, true))
-                                    ) {
-                                        $objRoomDemandPrice = new HotelRoomTypeDemandPrice();
-                                        foreach ($extraDemands as $demand) {
-                                            $idGlobalDemand = $demand['id_global_demand'];
-                                            $idOption = $demand['id_option'];
-                                            $objBookingDemand = new HotelBookingDemands();
-                                            $objBookingDemand->id_htl_booking = $objBookingDetail->id;
-                                            $objGlobalDemand = new HotelRoomTypeGlobalDemand($idGlobalDemand, $idLang);
-                                            if ($idOption) {
-                                                $objOption = new HotelRoomTypeGlobalDemandAdvanceOption($idOption, $idLang);
-                                                $objBookingDemand->name = $objOption->name;
-                                            } else {
-                                                $idOption = 0;
-                                                $objBookingDemand->name = $objGlobalDemand->name;
-                                            }
-                                            $objBookingDemand->unit_price_tax_excl = HotelRoomTypeDemand::getPriceStatic(
-                                                $idProduct,
-                                                $idGlobalDemand,
-                                                $idOption,
-                                                0
-                                            );
-                                            $objBookingDemand->unit_price_tax_incl = HotelRoomTypeDemand::getPriceStatic(
-                                                $idProduct,
-                                                $idGlobalDemand,
-                                                $idOption,
-                                                1
-                                            );
+                                if (!$objBookingDetail->save()) {
+                                    PrestaShopLogger::addLog('PaymentModule::validateOrder - Cannot save Booking Detail', 3, null, 'Cart', (int)$id_cart, true);
+                                    throw new PrestaShopException('Can\'t save Booking Detail');
+                                }
 
-                                            $numDays = 1;
-                                            if ($objGlobalDemand->price_calc_method == HotelRoomTypeGlobalDemand::WK_PRICE_CALC_METHOD_EACH_DAY) {
-                                                $numDays = HotelHelper::getNumberOfDays(
-                                                    $objBookingDetail->date_from,
-                                                    $objBookingDetail->date_to
-                                                );
-                                            }
+                                OrderTaxDetail::updateVatScoping((int) $id_order_detail, (int) $objBookingDetail->id, 0);
 
-                                            $objBookingDemand->total_price_tax_excl = $objBookingDemand->unit_price_tax_excl * $numDays;
-                                            $objBookingDemand->total_price_tax_incl = $objBookingDemand->unit_price_tax_incl * $numDays;
+                                if ($useTourismTax && ($idTourismTaxRulesGroup = Product::getIdTourismTaxRulesGroupByIdProduct($idProduct))) {
+                                    $hotelTaxContext = TaxConfiguration::resolveHotelAddressAndCollectionType($objCartBookingData->id_hotel, new Address((int) Cart::getIdAddressForTaxCalculation($idProduct)));
+                                    $numNights = max(1, HotelHelper::getNumberOfDays($objBookingDetail->date_from, $objBookingDetail->date_to));
+                                    $numAdults = (int) $objCartBookingData->adults;
+                                    $childAges = !empty($objCartBookingData->child_ages) ? (array) json_decode($objCartBookingData->child_ages, true) : array();
+                                    $unitPriceTaxExcl = (float) $total_price['total_price_tax_excl'] / $numNights;
 
-                                            $objBookingDemand->price_calc_method = $objGlobalDemand->price_calc_method;
-                                            $objBookingDemand->id_tax_rules_group = $objGlobalDemand->id_tax_rules_group;
-                                            $taxManager = TaxManagerFactory::getManager(
-                                                $vatAddress,
-                                                $objGlobalDemand->id_tax_rules_group
-                                            );
-                                            $taxCalc = $taxManager->getTaxCalculator();
-                                            $objBookingDemand->tax_computation_method = (int)$taxCalc->computation_method;
-                                            if ($objBookingDemand->save()) {
-                                                $objBookingDemand->tax_calculator = $taxCalc;
-                                                // Now save tax details of the extra demand
-                                                $objBookingDemand->setBookingDemandTaxDetails();
-                                            }
-                                        }
-                                    }
+                                    OrderTaxDetail::saveTourismTax(
+                                        $idTourismTaxRulesGroup,
+                                        $hotelTaxContext['address'],
+                                        $unitPriceTaxExcl,
+                                        $objBookingDetail->date_from,
+                                        $numNights,
+                                        $numAdults,
+                                        $childAges,
+                                        (int) $this->context->cart->id_currency,
+                                        $hotelTaxContext['collectionType'],
+                                        (int) $idLang,
+                                        1,
+                                        $order->id,
+                                        (int) $id_order_detail,
+                                        $objBookingDetail->id,
+                                        0
+                                    );
                                 }
                             }
                         } else {
@@ -1013,7 +994,30 @@ abstract class PaymentModuleCore extends Module
                                         $objServiceProductOrderDetail->name = $product['name'];
                                         $objServiceProductOrderDetail->quantity = $roomTypeService['quantity'];
                                         $objServiceProductOrderDetail->auto_added = $product['auto_add_to_cart'];
-                                        $objServiceProductOrderDetail->save();
+                                        if ($objServiceProductOrderDetail->save()) {
+                                            OrderTaxDetail::updateVatScoping((int) $objServiceProductOrderDetail->id_order_detail, 0, (int) $objServiceProductOrderDetail->id);
+
+                                            if ($useTourismTax && ($idTourismTaxRulesGroup = Product::getIdTourismTaxRulesGroupByIdProduct($idProduct))) {
+                                                $tourismTaxContext = TaxConfiguration::resolveServiceLineTaxContext($roomBookingDetail['id_hotel'], $roomBookingDetail['id'], new Address((int) Cart::getIdAddressForTaxCalculation($idProduct)));
+                                                OrderTaxDetail::saveTourismTax(
+                                                    $idTourismTaxRulesGroup,
+                                                    $tourismTaxContext['address'],
+                                                    (float) $objServiceProductOrderDetail->unit_price_tax_excl,
+                                                    $tourismTaxContext['checkInDate'],
+                                                    $tourismTaxContext['numNights'],
+                                                    $tourismTaxContext['numAdults'],
+                                                    $tourismTaxContext['childrenAges'],
+                                                    (int) $this->context->cart->id_currency,
+                                                    $tourismTaxContext['collectionType'],
+                                                    (int) $idLang,
+                                                    (int) $objServiceProductOrderDetail->quantity,
+                                                    $order->id,
+                                                    (int) $objServiceProductOrderDetail->id_order_detail,
+                                                    0,
+                                                    (int) $objServiceProductOrderDetail->id
+                                                );
+                                            }
+                                        }
                                     }
                                 }
                             } elseif (Product::SELLING_PREFERENCE_HOTEL_STANDALONE == $product['selling_preference_type']) {
@@ -1046,7 +1050,30 @@ abstract class PaymentModuleCore extends Module
                                             $objServiceProductOrderDetail->hotel_name = $objHotelBranch->hotel_name;
                                         }
                                         $objServiceProductOrderDetail->quantity = $hotelProduct['quantity'];
-                                        $objServiceProductOrderDetail->save();
+                                        if ($objServiceProductOrderDetail->save()) {
+                                            OrderTaxDetail::updateVatScoping((int) $objServiceProductOrderDetail->id_order_detail, 0, (int) $objServiceProductOrderDetail->id);
+
+                                            if ($useTourismTax && ($idTourismTaxRulesGroup = Product::getIdTourismTaxRulesGroupByIdProduct($idProduct))) {
+                                                $tourismTaxContext = TaxConfiguration::resolveServiceLineTaxContext($product['id_hotel'], 0, new Address((int) Cart::getIdAddressForTaxCalculation($idProduct)));
+                                                OrderTaxDetail::saveTourismTax(
+                                                    $idTourismTaxRulesGroup,
+                                                    $tourismTaxContext['address'],
+                                                    (float) $objServiceProductOrderDetail->unit_price_tax_excl,
+                                                    $tourismTaxContext['checkInDate'],
+                                                    $tourismTaxContext['numNights'],
+                                                    $tourismTaxContext['numAdults'],
+                                                    $tourismTaxContext['childrenAges'],
+                                                    (int) $this->context->cart->id_currency,
+                                                    $tourismTaxContext['collectionType'],
+                                                    (int) $idLang,
+                                                    (int) $objServiceProductOrderDetail->quantity,
+                                                    $order->id,
+                                                    (int) $objServiceProductOrderDetail->id_order_detail,
+                                                    0,
+                                                    (int) $objServiceProductOrderDetail->id
+                                                );
+                                            }
+                                        }
 
                                     }
                                 }
@@ -1074,7 +1101,30 @@ abstract class PaymentModuleCore extends Module
                                         $objServiceProductOrderDetail->name = $standaloneProduct['name'];
                                         $objServiceProductOrderDetail->option_name = $standaloneProduct['option_name'];
                                         $objServiceProductOrderDetail->quantity = $standaloneProduct['quantity'];
-                                        $objServiceProductOrderDetail->save();
+                                        if ($objServiceProductOrderDetail->save()) {
+                                            OrderTaxDetail::updateVatScoping((int) $objServiceProductOrderDetail->id_order_detail, 0, (int) $objServiceProductOrderDetail->id);
+
+                                            if ($useTourismTax && ($idTourismTaxRulesGroup = Product::getIdTourismTaxRulesGroupByIdProduct($idProduct))) {
+                                                $tourismTaxContext = TaxConfiguration::resolveServiceLineTaxContext(0, 0, new Address((int) Cart::getIdAddressForTaxCalculation($idProduct)));
+                                                OrderTaxDetail::saveTourismTax(
+                                                    $idTourismTaxRulesGroup,
+                                                    $tourismTaxContext['address'],
+                                                    (float) $objServiceProductOrderDetail->unit_price_tax_excl,
+                                                    $tourismTaxContext['checkInDate'],
+                                                    $tourismTaxContext['numNights'],
+                                                    $tourismTaxContext['numAdults'],
+                                                    $tourismTaxContext['childrenAges'],
+                                                    (int) $this->context->cart->id_currency,
+                                                    $tourismTaxContext['collectionType'],
+                                                    (int) $idLang,
+                                                    (int) $objServiceProductOrderDetail->quantity,
+                                                    $order->id,
+                                                    (int) $objServiceProductOrderDetail->id_order_detail,
+                                                    0,
+                                                    (int) $objServiceProductOrderDetail->id
+                                                );
+                                            }
+                                        }
 
                                     }
                                 }
@@ -1131,7 +1181,32 @@ abstract class PaymentModuleCore extends Module
                                             $objServiceProductOrderDetail->id_htl_booking_detail = $roomBookingDetail['id'];
                                             $objServiceProductOrderDetail->auto_added = $product['auto_add_to_cart'];
                                         }
-                                        $objServiceProductOrderDetail->save();
+                                        if ($objServiceProductOrderDetail->save()) {
+                                            OrderTaxDetail::updateVatScoping((int) $objServiceProductOrderDetail->id_order_detail, 0, (int) $objServiceProductOrderDetail->id);
+
+                                            $idHotel = $serviceProduct['id_hotel'] ? $serviceProduct['id_hotel'] : (isset($roomBookingDetail['id_hotel']) ? (int) $roomBookingDetail['id_hotel'] : 0);
+                                            $idHtlBookingDetail = $serviceProduct['id_hotel'] ? 0 : (isset($roomBookingDetail['id']) ? (int) $roomBookingDetail['id'] : 0);
+                                            if ($useTourismTax && ($idTourismTaxRulesGroup = Product::getIdTourismTaxRulesGroupByIdProduct($idProduct))) {
+                                                $tourismTaxContext = TaxConfiguration::resolveServiceLineTaxContext($idHotel, $idHtlBookingDetail, new Address((int) Cart::getIdAddressForTaxCalculation($idProduct)));
+                                                OrderTaxDetail::saveTourismTax(
+                                                    $idTourismTaxRulesGroup,
+                                                    $tourismTaxContext['address'],
+                                                    (float) $objServiceProductOrderDetail->unit_price_tax_excl,
+                                                    $tourismTaxContext['checkInDate'],
+                                                    $tourismTaxContext['numNights'],
+                                                    $tourismTaxContext['numAdults'],
+                                                    $tourismTaxContext['childrenAges'],
+                                                    (int) $this->context->cart->id_currency,
+                                                    $tourismTaxContext['collectionType'],
+                                                    (int) $idLang,
+                                                    (int) $objServiceProductOrderDetail->quantity,
+                                                    $order->id,
+                                                    (int) $objServiceProductOrderDetail->id_order_detail,
+                                                    0,
+                                                    (int) $objServiceProductOrderDetail->id
+                                                );
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1237,8 +1312,8 @@ abstract class PaymentModuleCore extends Module
                         $cart_booking_data_text = $this->getEmailTemplateContent('hotel_booking_cart_data_text.tpl', Mail::TYPE_TEXT, $cart_booking_data['cart_htl_data']);
                         $cart_booking_data_html = $this->getEmailTemplateContent('hotel_booking_cart_data.tpl', Mail::TYPE_HTML, $cart_booking_data['cart_htl_data']);
 
-                        $extra_demands_details_html = $this->getEmailTemplateContent('booking_extra_demands.tpl', Mail::TYPE_HTML, $cart_booking_data['cart_htl_data']);
-                        $extra_demands_details_text = $this->getEmailTemplateContent('booking_extra_demands_text.tpl', Mail::TYPE_TEXT, $cart_booking_data['cart_htl_data']);
+                        $extra_services_details_html = $this->getEmailTemplateContent('booking_extra_services.tpl', Mail::TYPE_HTML, $cart_booking_data['cart_htl_data']);
+                        $extra_services_details_text = $this->getEmailTemplateContent('booking_extra_services_text.tpl', Mail::TYPE_TEXT, $cart_booking_data['cart_htl_data']);
 
                         $normal_products_data_html = $this->getEmailTemplateContent('service_product_data.tpl', Mail::TYPE_HTML, $orderServiceProducts);
                         $normal_products_data_txt = $this->getEmailTemplateContent('service_product_data_text.tpl', Mail::TYPE_TEXT, $orderServiceProducts);
@@ -1250,8 +1325,8 @@ abstract class PaymentModuleCore extends Module
                         $room_tax = ($room_price_tax_incl - $room_price_tax_excl);
 
                         // extra services
-                        $additional_service_price_tax_excl = ($order->getTotalProductsWithoutTaxes(false, false, Product::SELLING_PREFERENCE_WITH_ROOM_TYPE, 0) + $cart_booking_data['total_extra_demands_te']);
-                        $additional_service_price_tax_incl = ($order->getTotalProductsWithTaxes(false, false, Product::SELLING_PREFERENCE_WITH_ROOM_TYPE, 0) + $cart_booking_data['total_extra_demands_ti']);
+                        $additional_service_price_tax_excl = ($order->getTotalProductsWithoutTaxes(false, false, Product::SELLING_PREFERENCE_WITH_ROOM_TYPE, 0));
+                        $additional_service_price_tax_incl = ($order->getTotalProductsWithTaxes(false, false, Product::SELLING_PREFERENCE_WITH_ROOM_TYPE, 0));
                         $additional_service_tax = ($additional_service_price_tax_incl - $additional_service_price_tax_excl);
 
                         // convenience fee price
@@ -1267,7 +1342,8 @@ abstract class PaymentModuleCore extends Module
 
                         $service_products_tax = ($standalone_products_price_tax_incl + $hotel_standalone_products_price_tax_incl) - ($standalone_products_price_tax_excl + $hotel_standalone_products_price_tax_excl);
 
-                        $total_order_tax = $room_tax + $additional_service_tax + $total_convenience_fee_tax + $service_products_tax;
+                        $totalTourismTax = OrderTaxDetail::getOrderTourismTaxTotal((int) $order->id);
+                        $total_order_tax = max(0, $room_tax + $additional_service_tax + $total_convenience_fee_tax + $service_products_tax - $totalTourismTax);
 
                         $total_products = Tools::displayPrice(Product::getTaxCalculationMethod() == PS_TAX_EXC ? $order->total_products : $order->total_products_wt, $this->context->currency, false);
 
@@ -1293,6 +1369,8 @@ abstract class PaymentModuleCore extends Module
                             ),
                             'service_products_tax' => Tools::displayPrice($service_products_tax, $this->context->currency, false),
                             'total_order_tax' => Tools::displayPrice($total_order_tax, $this->context->currency, false),
+                            'total_tourism_tax' => Tools::displayPrice($totalTourismTax, $this->context->currency, false),
+                            'has_tourism_tax' => $totalTourismTax > 0,
                             'total_paid' => Tools::displayPrice($order->total_paid, $this->context->currency, false),
                             'total_products' => Tools::displayPrice($total_products, $this->context->currency, false),
                             'total_discounts' => Tools::displayPrice(-$order->total_discounts, $this->context->currency, false),
@@ -1311,22 +1389,12 @@ abstract class PaymentModuleCore extends Module
                         $data = array(
                             '{cart_booking_data_html}' => $cart_booking_data_html,
                             '{cart_booking_data_text}' => $cart_booking_data_text,
-                            '{extra_demands_details_html}' => $extra_demands_details_html,
-                            '{extra_demands_details_text}' => $extra_demands_details_text,
+                            '{extra_services_details_html}' => $extra_services_details_html,
+                            '{extra_services_details_text}' => $extra_services_details_text,
                             '{normal_products_data_html}' => $normal_products_data_html,
                             '{normal_products_data_txt}' => $normal_products_data_txt,
                             '{order_total_info_html}' => $order_total_info_html,
                             '{order_total_info_txt}' => $order_total_info_txt,
-                            '{total_extra_demands_te}' => Tools::displayPrice(
-                                $cart_booking_data['total_extra_demands_te'],
-                                $this->context->currency,
-                                false
-                            ),
-                            '{extra_demands_tax}' => Tools::displayPrice(
-                                ($cart_booking_data['total_extra_demands_ti']-$cart_booking_data['total_extra_demands_te']),
-                                $this->context->currency,
-                                false
-                            ),
                             '{delivery_company}' => $delivery->company,
                             '{delivery_firstname}' => $delivery->firstname,
                             '{delivery_lastname}' => $delivery->lastname,
@@ -1895,10 +1963,7 @@ abstract class PaymentModuleCore extends Module
             $obj_cart_bk_data = new HotelCartBookingData();
             $obj_htl_bk_dtl = new HotelBookingDetail();
             $obj_rm_type = new HotelRoomType();
-            $objBookingDemand = new HotelBookingDemands();
             $objServiceProductOrderDetail = new ServiceProductOrderDetail();
-            $result['total_extra_demands_te'] = 0;
-            $result['total_extra_demands_ti'] = 0;
             $cart_htl_data = array();
             if (!empty($products)) {
                 foreach ($products as $type_key => $type_value) {
@@ -1972,35 +2037,6 @@ abstract class PaymentModuleCore extends Module
                                 $cart_htl_data[$type_key]['date_diff'][$date_join]['adults'] = $data_v['adults'];
                                 $cart_htl_data[$type_key]['date_diff'][$date_join]['children'] = $data_v['children'];
 
-                                // extra demands prices
-                                $cart_htl_data[$type_key]['date_diff'][$date_join]['extra_demands'] = $objBookingDemand->getRoomTypeBookingExtraDemands(
-                                    $order->id,
-                                    $type_value['product_id'],
-                                    0,
-                                    $data_v['date_from'],
-                                    $data_v['date_to']
-                                );
-                                $cart_htl_data[$type_key]['date_diff'][$date_join]['extra_demands_price_te'] = $objBookingDemand->getRoomTypeBookingExtraDemands(
-                                    $order->id,
-                                    $type_value['product_id'],
-                                    0,
-                                    $data_v['date_from'],
-                                    $data_v['date_to'],
-                                    0,
-                                    1,
-                                    0
-                                );
-                                $cart_htl_data[$type_key]['date_diff'][$date_join]['extra_demands_price_ti'] = $objBookingDemand->getRoomTypeBookingExtraDemands(
-                                    $order->id,
-                                    $type_value['product_id'],
-                                    0,
-                                    $data_v['date_from'],
-                                    $data_v['date_to'],
-                                    0,
-                                    1,
-                                    1
-                                );
-
                                 $cart_htl_data[$type_key]['date_diff'][$date_join]['additional_services'] = $objServiceProductOrderDetail->getRoomTypeServiceProducts(
                                     $order->id,
                                     0,
@@ -2046,9 +2082,6 @@ abstract class PaymentModuleCore extends Module
                                 $cart_htl_data[$type_key]['date_diff'][$date_join]['avg_paid_unit_price_tax_excl'] = ($cart_htl_data[$type_key]['date_diff'][$date_join]['paid_unit_price_tax_excl'] + $cart_htl_data[$type_key]['date_diff'][$date_join]['additional_services_price_auto_add_te']);
                                 $cart_htl_data[$type_key]['date_diff'][$date_join]['amount_tax_incl'] = ($data_v['total_price_tax_incl'] + $cart_htl_data[$type_key]['date_diff'][$date_join]['additional_services_price_auto_add_ti']);
                                 $cart_htl_data[$type_key]['date_diff'][$date_join]['amount_tax_excl'] = ($data_v['total_price_tax_excl'] + $cart_htl_data[$type_key]['date_diff'][$date_join]['additional_services_price_auto_add_te']);
-
-                                $result['total_extra_demands_te'] += $cart_htl_data[$type_key]['date_diff'][$date_join]['extra_demands_price_te'];
-                                $result['total_extra_demands_ti'] += $cart_htl_data[$type_key]['date_diff'][$date_join]['extra_demands_price_ti'];
                             }
                         }
                         // calculate averages now

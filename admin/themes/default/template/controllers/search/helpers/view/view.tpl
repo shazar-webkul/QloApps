@@ -121,6 +121,19 @@ $(function() {
 		</div>
 	{/if}
 
+	{if isset($num_hotel_amenities) && $num_hotel_amenities}
+		<div class="panel">
+			<h3>
+				{if $num_hotel_amenities == 1}
+					{l s='1 hotel amenity'}
+				{else}
+					{l s='%d hotel amenities' sprintf=$num_hotel_amenities}
+				{/if}
+			</h3>
+			{$hotel_amenities}
+		</div>
+	{/if}
+
 	{if isset($num_hotel_features) && $num_hotel_features}
 		<div class="panel">
 			<h3>
@@ -170,19 +183,6 @@ $(function() {
 				{/if}
 			</h3>
 			{$service_products}
-		</div>
-	{/if}
-
-	{if isset($num_global_demands) && $num_global_demands}
-		<div class="panel">
-			<h3>
-				{if $num_global_demands == 1}
-					{l s='1 global demand'}
-				{else}
-					{l s='%d global demands' sprintf=$num_global_demands}
-				{/if}
-			</h3>
-			{$global_demands}
 		</div>
 	{/if}
 

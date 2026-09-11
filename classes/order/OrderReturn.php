@@ -203,13 +203,15 @@ class OrderReturnCore extends ObjectModel
             }
 
             $objOrder = new Order($idOrder);
-            $objBookingDemands = new HotelBookingDemands();
             $objServiceProductOrderDetail = new ServiceProductOrderDetail();
 
             $calcServicePriceFirst = false;
             if ($objOrder->is_advance_payment && $objOrder->advance_paid_amount <= $objOrder->total_paid_real) {
                 $calcServicePriceFirst = true;
             }
+
+            $appliedTourismTaxByBooking = OrderTaxDetail::getAppliedTourismTaxTotals($idOrder, OrderTaxDetail::SCOPE_ROOM);
+            $appliedServiceTourismTaxByBooking = OrderTaxDetail::getAppliedTourismTaxTotals($idOrder, OrderTaxDetail::SCOPE_SERVICE);
 
             foreach ($returnDetails as $key => &$bookingRow) {
                 if ($skipReqCompletedNonRefunded) {
@@ -224,32 +226,9 @@ class OrderReturnCore extends ObjectModel
                     $bookingRow['extra_service_total_paid_amount'] = 0;
                     $bookingRow['extra_service_total_price_tax_incl'] = 0;
                     $bookingRow['room_paid_amount'] = 0;
+                    $bookingRow['tourism_tax_applied_amount'] = 0;
+                    $bookingRow['tourism_tax_paid_amount'] = 0;
 
-                    $roomSelectedDemands = $objBookingDemands->getRoomTypeBookingExtraDemands(
-                        $idOrder,
-                        $bookingRow['id_product'],
-                        $bookingRow['id_room'],
-                        $bookingRow['date_from'],
-                        $bookingRow['date_to'],
-                        0,
-                        0,
-                        1,
-                        $bookingRow['id']
-                    );
-                    if (count($roomSelectedDemands)) {
-                        foreach ($roomSelectedDemands as $demand) {
-                            if ($demand['total_price_tax_incl'] > 0) {
-                                if ($objOrder->total_paid_real > 0) {
-                                    if ($calcServicePriceFirst) {
-                                        $bookingRow['extra_service_total_paid_amount'] += $demand['total_price_tax_incl'];
-                                    } else {
-                                        $bookingRow['extra_service_total_paid_amount'] += ($objOrder->total_paid_real*$demand['total_price_tax_incl'])/($objOrder->total_paid_tax_incl + $objOrder->total_discounts_tax_incl);
-                                    }
-                                }
-                                $bookingRow['extra_service_total_price_tax_incl'] += $demand['total_price_tax_incl'];
-                            }
-                        }
-                    }
 
                     if ($roomSelectedServices = $objServiceProductOrderDetail->getRoomTypeServiceProducts(
                         0,
@@ -290,6 +269,12 @@ class OrderReturnCore extends ObjectModel
                                 $bookingRow['room_paid_amount'] = ($objOrder->total_paid_real*$bookingRow['total_price_tax_incl'])/ ($objOrder->total_paid_tax_incl + $objOrder->total_discounts_tax_incl);
                             }
                         }
+                    }
+                    $bookingRow['tourism_tax_applied_amount'] = (isset($appliedTourismTaxByBooking[$bookingRow['id_htl_booking']]) ? (float) $appliedTourismTaxByBooking[$bookingRow['id_htl_booking']] : 0.0)
+                        + (isset($appliedServiceTourismTaxByBooking[$bookingRow['id_htl_booking']]) ? (float) $appliedServiceTourismTaxByBooking[$bookingRow['id_htl_booking']] : 0.0);
+                    if ($bookingRow['tourism_tax_applied_amount'] > 0 && $objOrder->total_paid_real > 0) {
+                        $denominator = $objOrder->total_paid_tax_incl + $objOrder->total_discounts_tax_incl;
+                        $bookingRow['tourism_tax_paid_amount'] = $denominator > 0 ? ($objOrder->total_paid_real * $bookingRow['tourism_tax_applied_amount'] / $denominator) : 0.0;
                     }
                     if ($customerView) {
                         $dateJoin = $bookingRow['id_product'].'_'.strtotime($bookingRow['date_from']).strtotime($bookingRow['date_to']);

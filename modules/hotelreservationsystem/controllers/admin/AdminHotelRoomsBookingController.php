@@ -753,7 +753,7 @@ public function ajaxProcessGetCalenderData()
             }
             if ($product->booking_product || ($product->selling_preference_type != Product::SELLING_PREFERENCE_STANDALONE)) {
                 // cannot be added without room type or is a booking product.
-                $this->errors[] = $this->l('This product is either a room type or additional service and cannot be added thorugh this method.');
+                $this->errors[] = $this->l('This product is either a room type or extra service and cannot be added thorugh this method.');
             } elseif (!$product->allow_multiple_quantity) {
                 // check if product already exists in cart.
                 if ($id_cart) {
@@ -878,7 +878,6 @@ public function ajaxProcessGetCalenderData()
                 $id_room,
                 $date_from,
                 $date_to,
-                array(),
                 array(),
                 $id_cart,
                 $id_guest,
@@ -1163,7 +1162,7 @@ public function ajaxProcessGetCalenderData()
 
         // add fullcalender plugin
         $this->addJqueryUI('ui.tooltip', 'base', true);
-        $this->removeJS(Media::getJqueryUIPath('effects.core', 'base', false), false);
+        $this->removeJS(Media::getJqueryUIPath('ui.effect', 'base', false), false);
         $this->addCSS(array(_MODULE_DIR_.'hotelreservationsystem/views/css/HotelReservationAdmin.css'));
 
         $this->addCSS(_PS_JS_DIR_.'fullcalendar/main.css');
