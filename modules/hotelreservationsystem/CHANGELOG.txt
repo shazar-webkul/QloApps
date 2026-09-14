@@ -1,4 +1,51 @@
 ------------------------------
+# V1.7.0 to V1.8.0
+------------------------------
+
+## Improved/Changed Features:
+
+* [BO] : [#1815] Calendar not working properly throughout admin panel backoffice.
+* [BO] : [#1811] Undefined array key warning on SEO tab when adding a new hotel on Back office.
+* [BO] : [#1805] Enable the currently disabled Latitude and Longitude fields in back-office.
+* [BO] : [#1802] Centralize and Optimize Tooltip Handling  in the back-office.
+* [BO] : [#1801] Improve input validaiton and file-upload validation across admin flows.
+* [BO] : [#1797] Made Google Map ID optional and enabled hotel-location maps to work without one in back-office.
+* [BO] : [#1796] Added validation for child features in hotel.
+* [BO] : [#1792] Refactor group discount calculation.
+* [BO] : [#1791] Hotel reports module and functions needed for reports in their respective classes.
+* [BO] : [#1767] Decimal precision mismatch causing pricing inconsistencies.
+* [BO] : [#1765] Image categorisation for hotel images at back-office.
+* [BO] : [#1764] Dynamic homepage header media (image slider / video) display.
+* [BO] : [#1749] Booking calendar UI design in back-office.
+* [BO] : [#1733] Rating should not be a required field, as ratings are not applicable to all hotels.
+* [BO] : [#1717] Hotel amenities, and room features, and added room amenities.
+* [BO] : [#1708] Added vat number field in hotel branch info, and showing its value in Invoice PDF if present in hotel address.
+* [BO] : [#1698] Guest registration form button in order detail page, and made a new tab for Guest Registration in back office.
+* [BO] : [#1678] Price not updating when 'Booking Carts' edit permission is not enabled in back office.
+* [BO] : [#1672] Undefined index at Book Now Page in back-office.
+* [BO] : [#1671] Connected rooms feature to room management in back-office.
+* [BO] : [#1665] Add configuration for infant age in GeneralSetting controller in back-office.
+* [BO] : [#1655] Prevent duplicate advanced price rules with same restrictions from being enabled in bulk in back-office.
+* [BO] : [#1652] Preview of Seo fields added in backoffice.
+* [BO] : [#1637] Incorrect message on the admin products on trying to enable the room type if the hotel is inactive in the back-office.
+* [BO] : [#1626] Getting error in growl while deleting the hotel image or while changing the hotel cover image in the admin office.
+* [BO] : [#1618] Ensured that all order bills are cleared before the last room is checked out.
+* [BO] : [#1601] Show a success message when adding or deleting a room from the cart via Book Now in the back-office.
+
+* [CO] : [#1809] Additional facility feature from QloApps.
+* [CO] : [#1786] No Show and Cancellation booking status in back-office, and updated refund request management.
+* [CO] : [#1783] Improve request parameter validation for filter queries.
+* [CO] : [#1760] Tourism tax system with per-hotel configurable, rate tiers, child pricing, and exemption.
+* [CO] : [#1747] Incorrect refund rules display on the order details page in the back-office.
+* [CO] : [#1707] Footer text in front-office.
+* [CO] : [#1654] Disabled room types should not be visible in the suggestions during room reallocation in the back-office.
+* [CO] : [#1644] Disable location and Hotel field for 1 property .
+* [CO] : [#1635] Issue with room type tax calculation when the room type price is 0 and an advance rule uses a fixed amount.
+* [CO] : [#1630] Incorrect order status during reallocation after room category upgrade.
+* [CO] : [#1588] Duplicate category is created for hotel having same name and same parent category.
+* [CO] : [#1571] Price filter related issue in the front office on the room type listing page.
+
+------------------------------
 # V1.6.0 to V1.7.0
 ------------------------------
 

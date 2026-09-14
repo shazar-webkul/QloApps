@@ -1,4 +1,12 @@
 ------------------------------
+# V1.5.5 to V1.5.6
+------------------------------
+
+## Improved/Changed Features:
+
+* [BO] : [#1786] Updated refund detection in the best categories query to use the new refund tracking method instead of the removed is_refunded flag.
+
+------------------------------
 # V1.5.4 to V1.5.5
 ------------------------------
 

@@ -1,4 +1,12 @@
 ------------------------------
+# V1.2.0 to V1.2.1
+------------------------------
+
+## Improved/Changed Features:
+
+* [FO] : [#1760] Updated room price display to account for grossed-up tourism tax and per-occupancy pricing.
+
+------------------------------
 # V1.1.9 to V1.2.0
 ------------------------------
 
