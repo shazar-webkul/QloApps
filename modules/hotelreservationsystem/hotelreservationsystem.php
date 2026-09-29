@@ -480,6 +480,7 @@ class HotelReservationSystem extends Module
         $this->installTab('AdminHotelReservationSystemManagement', 'Hotel Reservation System');
         $this->installTab('AdminAddHotel', 'Manage Hotel', 'AdminHotelReservationSystemManagement');
         $this->installTab('AdminHotelRoomsBooking', 'Book Now', 'AdminHotelReservationSystemManagement');
+        $this->installTab('AdminHotelPropertyTypes', 'Manage Property Types', 'AdminHotelReservationSystemManagement');
         $this->installTab('AdminHotelAmenities', 'Manage Amenities', 'AdminHotelReservationSystemManagement');
         $this->installTab('AdminOrderRefundRules', 'Manage Order Refund Rules', 'AdminHotelReservationSystemManagement');
         $this->installTab('AdminOrderRefundRequests', 'Manage Order Refund Requests', 'AdminHotelReservationSystemManagement');
@@ -620,8 +621,6 @@ class HotelReservationSystem extends Module
             'QLO_HEADER_SLIDER_AUTO_PLAY',
             'QLO_HEADER_SLIDER_INTERVAL',
             'QLO_HEADER_SLIDER_ANIM_TYPE',
-            'QLO_USE_TOURISM_TAX',
-            'QLO_TOURISM_TAX_GROSSED_UP',
         );
         foreach ($configKeys as $key) {
             if (!Configuration::deleteByName($key)) {

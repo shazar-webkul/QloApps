@@ -130,6 +130,9 @@ class HotelBookingDetail extends ObjectModel
     // hotel information/location/contact
     public $hotel_name;
     public $room_type_name;
+    public $selling_object_name;
+    public $selling_object_plural_name;
+    public $property_type_name;
     public $city;
     public $state;
     public $country;
@@ -165,7 +168,6 @@ class HotelBookingDetail extends ObjectModel
     const SEARCH_TYPE_OWS = 1;
     const SEARCH_TYPE_NORMAL = 2;
 
-    //
     const PS_ROOM_UNIT_SELECTION_TYPE_OCCUPANCY = 1;
     const PS_ROOM_UNIT_SELECTION_TYPE_QUANTITY = 2;
 
@@ -196,6 +198,9 @@ class HotelBookingDetail extends ObjectModel
             // hotel information/location/contact
             'room_num' => array('type' => self::TYPE_STRING, 'required' => true),
             'room_type_name' => array('type' => self::TYPE_STRING, 'required' => true),
+            'selling_object_name' => array('type' => self::TYPE_STRING),
+            'selling_object_plural_name' => array('type' => self::TYPE_STRING),
+            'property_type_name' => array('type' => self::TYPE_STRING),
             'hotel_name' => array('type' => self::TYPE_STRING, 'required' => true),
             'city' => array('type' => self::TYPE_STRING, 'validate' => 'isCityName', 'size' => 64, 'required' => true),
             'state' => array('type' => self::TYPE_STRING),
@@ -2194,6 +2199,13 @@ class HotelBookingDetail extends ObjectModel
                         $objBookingDetail->comment = $objCartBookingData->comment;
                         $objBookingDetail->id_status = 1;
                         $objBookingDetail->room_type_name = Product::getProductName($idNewRoomType, null, $objOrder->id_lang);
+
+                        // Save room selling object names as they are at the time of reallocation
+                        if ($roomTypeInfo = $objRoomType->getRoomTypeInfoByIdProduct($idNewRoomType, $objOrder->id_lang)) {
+                            $objBookingDetail->selling_object_name = $roomTypeInfo['selling_object_name'];
+                            $objBookingDetail->selling_object_plural_name = $roomTypeInfo['selling_object_plural_name'];
+                        }
+
                         $objBookingDetail->date_from = $objCartBookingData->date_from;
                         $objBookingDetail->date_to = $objCartBookingData->date_to;
                         $objBookingDetail->adults = $objCartBookingData->adults;

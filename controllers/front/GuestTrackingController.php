@@ -121,6 +121,7 @@ class GuestTrackingControllerCore extends FrontController
             && ($dateFrom = Tools::getValue('date_from'))
             && ($dateTo = Tools::getValue('date_to'))
         ) {
+            $objRoomType = new HotelRoomType();
             $useTax = 0;
             if (Group::getPriceDisplayMethod($this->context->customer->id_default_group) == PS_TAX_INC) {
                 $useTax = 1;
@@ -144,8 +145,10 @@ class GuestTrackingControllerCore extends FrontController
                 ));
             }
 
+            $roomTypeInfo = $objRoomType->getRoomTypeInfoByIdProduct($idProduct);
             $this->context->smarty->assign(array(
                 'objOrder' => new Order($idOrder),
+                'room_type_info' => $roomTypeInfo,
             ));
 
             $response['extra_services'] = $this->context->smarty->fetch(_PS_THEME_DIR_.'_partials/order-extra-services.tpl');
@@ -279,6 +282,12 @@ class GuestTrackingControllerCore extends FrontController
                                 }
                                 $cartHotelData[$type_key]['id_product'] = $type_value['product_id'];
                                 $cartHotelData[$type_key]['cover_img'] = $cover_img;
+
+                                // Prefer the name stored at order-creation time so it stays historically accurate
+                                if (!empty($order_bk_data[0]['selling_object_name'])) {
+                                    $cartHotelData[$type_key]['selling_object_name'] = $order_bk_data[0]['selling_object_name'];
+                                    $cartHotelData[$type_key]['selling_object_plural_name'] = $order_bk_data[0]['selling_object_plural_name'];
+                                }
 
                                 foreach ($order_bk_data as $data_k => $data_v) {
                                     $date_join = strtotime($data_v['date_from']).strtotime($data_v['date_to']);
@@ -449,7 +458,7 @@ class GuestTrackingControllerCore extends FrontController
                                     $value['avg_price_diff_tax_excl'] = abs(Tools::ps_round($value['avg_paid_unit_price_tax_excl'] - $value['product_price_tax_excl'], 6));
                                     $value['avg_price_diff_tax_incl'] = abs(Tools::ps_round($value['avg_paid_unit_price_tax_incl'] - $value['product_price_tax_incl'], 6));
                                 }
-                            } elseif ($type_value['selling_preference_type'] == Product::SELLING_PREFERENCE_WITH_ROOM_TYPE) {
+                            } elseif (Product::SELLING_PREFERENCE_WITH_ROOM_TYPE == $type_value['selling_preference_type']) {
                                 if ($type_value['product_auto_add'] && $type_value['product_price_addition_type'] == Product::PRICE_ADDITION_TYPE_INDEPENDENT) {
                                     $total_convenience_fee_ti += $objServiceProductOrderDetail->getRoomTypeServiceProducts(
                                         $idOrder,
@@ -476,7 +485,7 @@ class GuestTrackingControllerCore extends FrontController
                                         1
                                     );
                                 }
-                            } else if ($type_value['selling_preference_type'] == Product::SELLING_PREFERENCE_HOTEL_STANDALONE) {
+                            } else if (Product::SELLING_PREFERENCE_WITH_HOTEL == $type_value['selling_preference_type']) {
                                 $cover_image_arr = $product->getCover($type_value['product_id']);
 
                                 if (!empty($cover_image_arr)) {
@@ -488,7 +497,7 @@ class GuestTrackingControllerCore extends FrontController
                                 foreach ($hotelProducts as $hotelProduct) {
                                     $hotelServiceProducts[] = array_merge($type_value, $hotelProduct);
                                 }
-                            } else if ($type_value['selling_preference_type'] == Product::SELLING_PREFERENCE_STANDALONE) {
+                            } else if (Product::SELLING_PREFERENCE_WITH_STANDALONE == $type_value['selling_preference_type']) {
                                 $cover_image_arr = $product->getCover($type_value['product_id']);
 
                                 if (!empty($cover_image_arr)) {
@@ -538,6 +547,7 @@ class GuestTrackingControllerCore extends FrontController
                 $order->obj_hotel_branch_information = $objHotelBranchInformation;
                 $order->hotel_address_info = $hotelAddressInfo;
                 $order->hotel_refund_rules = $hotelRefundRules;
+                $order->property_type = $objHotelBranchInformation ? $objHotelBranchInformation->propertyTypeName : null;
                 //end
 
                 Hook::exec('actionOrderDetail', array('carrier' => $order->carrier, 'order' => $order));
@@ -557,6 +567,7 @@ class GuestTrackingControllerCore extends FrontController
             'guestInformations' => (array)$customer,
             'view_on_map' => Configuration::get('WK_GOOGLE_ACTIVE_MAP'),
             'total_tourism_tax' => isset($total_tourism_tax) ? $total_tourism_tax : 0,
+            'show_tourism_tax_separately' => (bool) Configuration::get('QLO_TOURISM_TAX_SHOW_SEPARATE'),
         ));
     }
 

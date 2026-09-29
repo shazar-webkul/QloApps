@@ -23,9 +23,9 @@
 <div class="panel">
 	<div class="panel-heading">
 		{if isset($edit)}
-			<i class='icon-pencil'></i> {l s='Edit Hotel' mod='hotelreservationsystem'}
+			<i class='icon-pencil'></i> {l s='Edit Property' mod='hotelreservationsystem'}
 		{else}
-			<i class='icon-plus'></i> {l s='Add New Hotel' mod='hotelreservationsystem'}
+			<i class='icon-plus'></i> {l s='Add New Property' mod='hotelreservationsystem'}
 		{/if}
 	</div>
 
@@ -119,7 +119,7 @@
 					<div class="form-group">
 						<label class="control-label col-lg-3">
 							<span>
-								{l s='Enable Hotel' mod='hotelreservationsystem'}
+								{l s='Enable' mod='hotelreservationsystem'}
 							</span>
 						</label>
 						<div class="col-lg-9 ">
@@ -132,9 +132,28 @@
 							</span>
 						</div>
 					</div>
+					{if isset($hotel_property_types_info) && $hotel_property_types_info}
+						<div class="form-group">
+							<label class="control-label col-sm-3 " for="id_property_type">
+								<span>
+									{l s='Property Type :' mod='hotelreservationsystem'}
+								</span>
+							</label>
+							<div class="col-sm-6">
+								<select name="id_property_type" id="id_property_type" class="form-control chosen">
+									{foreach from=$hotel_property_types_info item=property_type}
+										<option value="{$property_type.id_property_type|escape:'htmlall':'UTF-8'}"
+											{if isset($selected_hotel_property_type) && $selected_hotel_property_type == $property_type.id_property_type}selected{/if}>
+											{$property_type.name|escape:'htmlall':'UTF-8'}
+										</option>
+									{/foreach}
+								</select>
+							</div>
+						</div>
+					{/if}
 					<div class="form-group">
 						<label class="col-sm-3 control-label required" for="hotel_name" >
-							{l s='Hotel Name :' mod='hotelreservationsystem'}
+							{l s='Name :' mod='hotelreservationsystem'}
 							{include file="../../../_partials/htl-form-fields-flag.tpl"}
 						</label>
 						<div class="col-lg-6">
@@ -309,7 +328,7 @@
 					</div>
 					<div class="form-group">
 						<label class="col-sm-3 control-label">
-							{l s='Hotel Policies :' mod='hotelreservationsystem'}
+							{l s='Policies :' mod='hotelreservationsystem'}
 							{include file="../../../_partials/htl-form-fields-flag.tpl"}
 						</label>
 						<div class="col-lg-6">
@@ -352,7 +371,7 @@
 								<input type="text"
 								id="link_rewrite_{$language.id_lang}"
 								name="link_rewrite_{$language.id_lang}"
-								value="{if isset($smarty.post.$link_rewrite)}{$smarty.post.$link_rewrite|escape:'htmlall':'UTF-8'}{elseif isset($edit)}{$link_rewrite_info[{$language.id_lang}]|escape:'htmlall':'UTF-8'}{/if}"
+								value="{if isset($smarty.post.$link_rewrite)}{$smarty.post.$link_rewrite|escape:'htmlall':'UTF-8'}{elseif isset($edit) && isset($link_rewrite_info[$language.id_lang])}{$link_rewrite_info[$language.id_lang]|escape:'htmlall':'UTF-8'}{/if}"
 								class="form-control wk_text_field_all wk_text_field_{$language.id_lang}"
 								maxlength="128"
 								{if $currentLang.id_lang != $language.id_lang}style="display:none;"{/if} />
@@ -377,7 +396,7 @@
 								<input type="text"
 								id="meta_title_{$language.id_lang}"
 								name="meta_title_{$language.id_lang}"
-								value="{if isset($smarty.post.$meta_title)}{$smarty.post.$meta_title|truncate:128:'':true|escape:'htmlall':'UTF-8'}{elseif isset($edit)}{$meta_title_info[$language.id_lang]|truncate:128:'':true|escape:'htmlall':'UTF-8'}{/if}"
+								value="{if isset($smarty.post.$meta_title)}{$smarty.post.$meta_title|truncate:128:'':true|escape:'htmlall':'UTF-8'}{elseif isset($edit) && isset($meta_title_info[$language.id_lang])}{$meta_title_info[$language.id_lang]|truncate:128:'':true|escape:'htmlall':'UTF-8'}{/if}"
 								class="form-control"
 								maxlength="128"
 								data-maxchar="128" />
@@ -403,7 +422,7 @@
 									class="form-control textarea-autosize"
 									rows="1"
 									maxlength="255"
-									data-maxchar="255">{if isset($smarty.post.$meta_description)}{$smarty.post.$meta_description|truncate:255:'':true|escape:'htmlall':'UTF-8'}{elseif isset($edit)}{$meta_description_info[{$language.id_lang}]|truncate:255:'':true|escape:'htmlall':'UTF-8'}{/if}</textarea>
+									data-maxchar="255">{if isset($smarty.post.$meta_description)}{$smarty.post.$meta_description|truncate:255:'':true|escape:'htmlall':'UTF-8'}{elseif isset($edit) && isset($meta_description_info[$language.id_lang])}{$meta_description_info[$language.id_lang]|truncate:255:'':true|escape:'htmlall':'UTF-8'}{/if}</textarea>
 								</div>
 							{/foreach}
 						</div>
@@ -429,7 +448,7 @@
 									<input type="text"
 									id="meta_keywords_{$language.id_lang}"
 									name="meta_keywords_{$language.id_lang}"
-									value="{if isset($smarty.post.$meta_keywords)}{$smarty.post.$meta_keywords|escape:'htmlall':'UTF-8'}{elseif isset($edit)}{$meta_keywords_info[{$language.id_lang}]|escape:'htmlall':'UTF-8'}{/if}"
+									value="{if isset($smarty.post.$meta_keywords)}{$smarty.post.$meta_keywords|escape:'htmlall':'UTF-8'}{elseif isset($edit) && isset($meta_keywords_info[$language.id_lang])}{$meta_keywords_info[$language.id_lang]|escape:'htmlall':'UTF-8'}{/if}"
 									class="form-control tagify"
 									maxlength="225">
 								</div>
@@ -472,7 +491,7 @@
 						</div>
 					{else}
 						<div class="alert alert-warning">
-							{l s='Please save hotel information before saving hotel images.' mod='hotelreservationsystem'}
+							{l s='Please save property information before saving property images.' mod='hotelreservationsystem'}
 						</div>
 					{/if}
 
@@ -529,7 +548,7 @@
 						</div>
 					{else}
 						<div class="alert alert-warning">
-							{l s='Please save the hotel information before saving the hotel booking restrictions.' mod='hotelreservationsystem'}
+							{l s='Please save the property information before saving the property booking restrictions.' mod='hotelreservationsystem'}
 						</div>
 					{/if}
 
@@ -619,7 +638,7 @@
 						</div>
 					{else}
 						<div class="alert alert-warning">
-							{l s='Please save hotel information before saving refund policy options.' mod='hotelreservationsystem'}
+							{l s='Please save property information before saving refund policy options.' mod='hotelreservationsystem'}
 						</div>
 					{/if}
 
@@ -663,7 +682,7 @@
 						</div>
 					{else}
 						<div class="alert alert-warning">
-							{l s='Please save hotel information before assigning hotel amenities.' mod='hotelreservationsystem'}
+							{l s='Please save property information before assigning property amenities.' mod='hotelreservationsystem'}
 						</div>
 					{/if}
 
