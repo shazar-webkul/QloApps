@@ -38,6 +38,10 @@
   - #1594: Refund remarks should be displayed in the PayPal transaction refund list in the Back Office.
   - #1601: Show a success message when adding or deleting a room from the cart via Book Now in the back-office.
   - #1568: Admin search configuration controller from the back-office.
+  - #1830: Configurable options to show or hide tourism tax from the price summary on front office, invoices, and booking voucher.
+  - #1827: Updated localization import flow in the back-office.
+  - #1819: Replaced stale third-party URLs and branding with QloApps equivalents in the back-office.
+  - #1828: Removed the "QloApps Booking iCalendar (.ics) File Export" module (added in #1696) from the modules catalog before release.
 
 - Bugs Fixed:
   - #1815: Calendar not working properly throughout admin panel backoffice.
@@ -90,6 +94,17 @@
   - #1627: Unable to update the position of the service products in the back office.
   - #1626: Getting error in growl while deleting the hotel image or while changing the hotel cover image in the admin office.
   - #1612: Dashboard shows a fatal error when the ‘number of decimals’ value is set to 0 in the back office.
+  - #1860: Validate minimum length of stay when it exceeds maximum length of stay.
+  - #1859: Resolve group discount calculation for multiple nights.
+  - #1856: Resolve warning when changing booking status on the Order Detail page in the back office.
+  - #1855: Add missing option to export hotels in the back office.
+  - #1850: Prevent duplicate entry fatal error when clicking the Save button twice on the Room Type Features tab in the back office.
+  - #1846: Resolve invalid menu name issue in the back office.
+  - #1844: Resolve warning on the admin login page.
+  - #1840: Resolve error on the SEO tab of Hotel and Room Type after changing the language in the back office.
+  - #1836: Resolve warning when saving Room Feature configuration in the back office.
+  - #1834: Manage Hotel Features menu causes Controller not found error in back-office.
+  - #1831: Fatal issue while creating a backoffice order in the back-office.
 
 ## Front Office:
 - Improvements:
@@ -115,6 +130,10 @@
   - #1623: Remove blank white space when all landing page blocks are disabled in Front-office.
   - #1595: Paypal transaction ID not visible on the order details page, in the payment section of the back-office.
   - #1622: On the room type list page, the room type name was not clickable. It has now been made clickable in the front-office.
+  - #1835: Resolve undefined variable warning on the frontend Order Detail page.
+  - #1851: Resolve issue where the parent room feature is displayed instead of the child features on the checkout page.
+  - #1837: Resolve error on the Order Detail page after room reallocation on the frontend.
+  - #1829: Include all service prices in the booking total calculation on the block cart popup.
 
 ## Core:
 - Improvements:
@@ -134,6 +153,12 @@
   - #1684: Feat(ai): add AGENTS.md for QloApps.
   - #1639: Hotel name column from room information table in the order confirmation email.
   - #1567: Auto upgrade module from QloApps core.
+  - #1849: Change the default service product price calculation constant.
+  - #1832: Renamed the admin and install folders to admin-dev and install-dev.
+  - #1768: QloApps must be compatible with PHP version 8.1 to 8.5.
+  - #1826: PayPal Commerce module compatibility and issues fixed, with license text comments updated.
+  - #1688: Improved the price calculation method for service products, and made the selling type of service products more flexible.
+  - #1713: Added per-room booking methods, standardized selling object type across order pages, and implemented default property and room type values.
 
 - Bugs Fixed:
   - #1689: Upgraded the password hashing algorithm from MD5 to bcrypt.
@@ -188,6 +213,7 @@
   - #1628: Added our property page in theme meta on install.
   - #1625: Undefined variable in module.php.
   - #1571: Price filter related issue in the front office on the room type listing page.
+  - #1858: Display and validate hotel-restricted vouchers correctly when the hotel matches.
 
 ## Web Services:
 - Bugs Fixed:

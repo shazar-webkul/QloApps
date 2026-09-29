@@ -5,6 +5,7 @@
 ## Improved/Changed Features:
 
 * [FO] : [#1760] Updated room price display to account for grossed-up tourism tax and per-occupancy pricing.
+* [BO] : [#1713] Renamed "Hotel" to "Property" throughout the Hotel Room display settings form and its validation messages.
 
 ------------------------------
 # V1.1.9 to V1.2.0
