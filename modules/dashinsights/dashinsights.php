@@ -31,7 +31,7 @@ class DashInsights extends Module
     {
         $this->name = 'dashinsights';
         $this->tab = 'dashboard';
-        $this->version = '1.0.2';
+        $this->version = '1.0.3';
         $this->ps_versions_compliancy = array('min' => '1.6', 'max' => '1.6');
         $this->author = 'Webkul';
         $this->bootstrap = true;
@@ -364,7 +364,7 @@ class DashInsights extends Module
             array('key' => $this->l('Mon'), 'name' => $this->l('Monday')),
             array('key' => $this->l('Tue'), 'name' => $this->l('Tuesday')),
             array('key' => $this->l('Wed'), 'name' => $this->l('Wednesday')),
-            array('key' => $this->l('Thu'), 'name' => $this->l('Thrusday')),
+            array('key' => $this->l('Thu'), 'name' => $this->l('Thursday')),
             array('key' => $this->l('Fri'), 'name' => $this->l('Friday')),
             array('key' => $this->l('Sat'), 'name' => $this->l('Saturday'))
         );

@@ -244,7 +244,7 @@ class AdminHotelRoomsBookingController extends ModuleAdminController
                     if ($objBookingDetail->reallocateBooking($idHtlBookingFrom, $idRoomToReallocate, $priceDiff)) {
                         Tools::redirectAdmin(self::$currentIndex.'&id_order='.(int) $idOrder.'&vieworder&conf=52&token='.$this->token);
                     } else {
-                        $this->errors[] = $this->l('Some error occured. Please try again.');
+                        $this->errors[] = $this->l('Some error occurred. Please try again.');
                     }
                 }
             } else {
@@ -286,7 +286,7 @@ class AdminHotelRoomsBookingController extends ModuleAdminController
                     if ($objBookingDetail->swapBooking($idHtlBookingFrom, $idHtlBookingToSwap)) {
                         Tools::redirectAdmin(self::$currentIndex.'&id_order='.(int)$idOrder.'&vieworder&conf=53&token='.$this->token);
                     } else {
-                        $this->errors[] = $this->l('Some error occured. Please try again.');
+                        $this->errors[] = $this->l('Some error occurred. Please try again.');
                     }
                 }
             } else {
@@ -763,7 +763,7 @@ public function ajaxProcessGetCalenderData()
             }
             if ($product->booking_product || !Product::isSellableAsStandalone($product->id)) {
                 // cannot be added without room type or is a booking product.
-                $this->errors[] = $this->l('This product is either a room type or extra service and cannot be added thorugh this method.');
+                $this->errors[] = $this->l('This product is either a room type or extra service and cannot be added through this method.');
             } elseif (!$product->allow_multiple_quantity) {
                 // check if product already exists in cart.
                 if ($id_cart) {
@@ -971,6 +971,8 @@ public function ajaxProcessGetCalenderData()
 
         if ($booking_data) {
             $objHotelRoomType = new HotelRoomType();
+            $availRoomTypesToRealloc = array();
+            $availRoomsToSwap = array();
             foreach ($booking_data['rm_data'] as $key_bk_data => $value_bk_data) {
                 $booking_data['rm_data'][$key_bk_data]['room_type_info'] = $objHotelRoomType->getRoomTypeInfoByIdProduct($value_bk_data['id_product']);
                 if (isset($value_bk_data['data']['booked']) && $value_bk_data['data']['booked']) {
@@ -997,8 +999,18 @@ public function ajaxProcessGetCalenderData()
                                     $booking_data['rm_data'][$key_bk_data]['data']['booked'][$booked_k1]['detail'][$kDtl]['currency_sign'] = (new Currency($objOrder->id_currency))->sign;
                                 }
 
-                                $booking_data['rm_data'][$key_bk_data]['data']['booked'][$booked_k1]['detail'][$kDtl]['avail_room_types_to_realloc'] = $obj_booking_dtl->getAvailableRoomsForReallocation($booked_v1['detail'][$kDtl]['date_from'], $booked_v1['detail'][$kDtl]['date_to'], 0, $booked_v1['id_hotel'], 1);
-                                $booking_data['rm_data'][$key_bk_data]['data']['booked'][$booked_k1]['detail'][$kDtl]['avail_rooms_to_swap'] = $obj_booking_dtl->getAvailableRoomsForSwapping($booked_v1['detail'][$kDtl]['date_from'], $booked_v1['detail'][$kDtl]['date_to'], $booked_v1['id_product'], $booked_v1['id_hotel'], $booked_v1['id_room']);
+                                // rooms available for reallocation are same for the same dates and hotel, so get them only once
+                                $reallocKey = $booked_v1['detail'][$kDtl]['date_from'].'_'.$booked_v1['detail'][$kDtl]['date_to'].'_0_'.$booked_v1['id_hotel'];
+                                if (!isset($availRoomTypesToRealloc[$reallocKey])) {
+                                    $availRoomTypesToRealloc[$reallocKey] = $obj_booking_dtl->getAvailableRoomsForReallocation($booked_v1['detail'][$kDtl]['date_from'], $booked_v1['detail'][$kDtl]['date_to'], 0, $booked_v1['id_hotel'], 1, true);
+                                }
+                                $booking_data['rm_data'][$key_bk_data]['data']['booked'][$booked_k1]['detail'][$kDtl]['avail_room_types_to_realloc'] = !empty($availRoomTypesToRealloc[$reallocKey]) ? $availRoomTypesToRealloc[$reallocKey] : false;
+                                // rooms available for swapping are same for the same room, dates and hotel, so get them only once
+                                $swapKey = $booked_v1['detail'][$kDtl]['date_from'].'_'.$booked_v1['detail'][$kDtl]['date_to'].'_'.$booked_v1['id_product'].'_'.$booked_v1['id_hotel'].'_'.$booked_v1['id_room'];
+                                if (!isset($availRoomsToSwap[$swapKey])) {
+                                    $availRoomsToSwap[$swapKey] = $obj_booking_dtl->getAvailableRoomsForSwapping($booked_v1['detail'][$kDtl]['date_from'], $booked_v1['detail'][$kDtl]['date_to'], $booked_v1['id_product'], $booked_v1['id_hotel'], $booked_v1['id_room'], true);
+                                }
+                                $booking_data['rm_data'][$key_bk_data]['data']['booked'][$booked_k1]['detail'][$kDtl]['avail_rooms_to_swap'] = !empty($availRoomsToSwap[$swapKey]) ? $availRoomsToSwap[$swapKey] : false;
                             }
                         }
                     }

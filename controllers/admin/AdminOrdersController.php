@@ -61,20 +61,20 @@ class AdminOrdersControllerCore extends AdminController
         CONCAT(c.`firstname`, \' \', c.`lastname`) AS `customer`,
         osl.`name` AS `osname`, os.`color`,
         cu.iso_code AS currency,
-        IF((SELECT so.id_order FROM `'._DB_PREFIX_.'orders` so WHERE so.id_customer = a.id_customer AND so.id_order < a.id_order LIMIT 1) > 0, 0, 1) as new,
+        IF(fo.`first_order` IS NULL OR fo.`first_order` = a.`id_order`, 1, 0) as new,
         IF(a.valid, 1, 0) badge_success,
         hbil.`hotel_name`,
-        (SELECT COUNT(hbd.`id`) FROM `'._DB_PREFIX_.'htl_booking_detail` hbd WHERE hbd.`id_order` = a.`id_order`) as num_rooms,
-        (SELECT SUM(hbd.`adults`) + SUM(hbd.`children`) FROM `'._DB_PREFIX_.'htl_booking_detail` hbd WHERE hbd.`id_order` = a.`id_order`) as total_guests_count,
-        (SELECT CONCAT(
-            SUM(hbd.`adults`),
+        hba.`num_rooms` AS num_rooms,
+        hba.`total_guests_count` AS total_guests_count,
+        CONCAT(
+            hba.`adults`,
             \' '.$this->l('Adult(s)').' \',
-            IF(SUM(hbd.`children`), CONCAT(SUM(hbd.`children`), \' '.$this->l('Children').'\'), \'\')
-        ) FROM `'._DB_PREFIX_.'htl_booking_detail` hbd WHERE hbd.`id_order` = a.`id_order`) as total_guests,
-        (SELECT SUM(DATEDIFF(hbd.`date_to`, hbd.`date_from`)) FROM `'._DB_PREFIX_.'htl_booking_detail` hbd WHERE hbd.`id_order` = a.`id_order`) as los,
+            IF(hba.`children`, CONCAT(hba.`children`, \' '.$this->l('Children').'\'), \'\')
+        ) AS total_guests,
+        hba.`los` AS los,
         hbd.`id_room` AS id_room_information,
-        (SELECT GROUP_CONCAT(CONCAT(ps.period, \'~\', ps.cnt) ORDER BY ps.period SEPARATOR \'::\') FROM (SELECT CONCAT(hbd.`date_from`, \'|\', hbd.`date_to`) AS period, COUNT(*) AS cnt FROM `'._DB_PREFIX_.'htl_booking_detail` hbd WHERE hbd.`id_order` = a.`id_order` GROUP BY hbd.`date_from`, hbd.`date_to`) AS ps) AS stay_periods,
-        (SELECT COUNT(spod.`id_service_product_order_detail`) FROM `'._DB_PREFIX_.'service_product_order_detail` spod WHERE spod.`id_order` = a.`id_order` AND spod.`id_htl_booking_detail`=0) as num_products';
+        hsp.`stay_periods` AS stay_periods,
+        IFNULL(spn.`num_products`, 0) AS num_products';
 
         $this->_select .= ',
         (SELECT sl.`name` FROM `'._DB_PREFIX_.'source` s LEFT JOIN `'._DB_PREFIX_.'source_lang` sl ON (sl.`id_source` = s.`id_source` AND sl.`id_lang` = '.(int)$this->context->language->id.') WHERE s.`id_source` = a.`id_source`) AS `booking_source_name`,
@@ -89,8 +89,36 @@ class AdminOrdersControllerCore extends AdminController
         LEFT JOIN `'._DB_PREFIX_.'service_product_order_detail` spod ON (spod.`id_order` = a.`id_order`)
         LEFT JOIN `'._DB_PREFIX_.'htl_branch_info_lang` hbil ON (IF(hbd.`id_hotel`, (hbil.`id` = hbd.`id_hotel`), (hbil.`id` = spod.`id_hotel`)))
         LEFT JOIN (
-            SELECT hbd2.`id`, IF(hbd2.`id` IN ('.OrderReturn::getRefundedBookingIdsSubquery().'), 1, 0) AS is_room_refunded
+            SELECT so.`id_customer`, MIN(so.`id_order`) AS first_order
+            FROM `'._DB_PREFIX_.'orders` so
+            GROUP BY so.`id_customer`
+        ) fo ON (fo.`id_customer` = a.`id_customer`)
+        LEFT JOIN (
+            SELECT hbd3.`id_order`, COUNT(hbd3.`id`) AS num_rooms, SUM(hbd3.`adults`) AS adults, SUM(hbd3.`children`) AS children,
+            SUM(hbd3.`adults`) + SUM(hbd3.`children`) AS total_guests_count,
+            SUM(DATEDIFF(hbd3.`date_to`, hbd3.`date_from`)) AS los
+            FROM `'._DB_PREFIX_.'htl_booking_detail` hbd3
+            GROUP BY hbd3.`id_order`
+        ) hba ON (hba.`id_order` = a.`id_order`)
+        LEFT JOIN (
+            SELECT sp.`id_order`, GROUP_CONCAT(CONCAT(sp.`period`, \'~\', sp.`cnt`) ORDER BY sp.`period` SEPARATOR \'::\') AS stay_periods
+            FROM (
+                SELECT hbd4.`id_order`, CONCAT(hbd4.`date_from`, \'|\', hbd4.`date_to`) AS period, COUNT(*) AS cnt
+                FROM `'._DB_PREFIX_.'htl_booking_detail` hbd4
+                GROUP BY hbd4.`id_order`, hbd4.`date_from`, hbd4.`date_to`
+            ) sp
+            GROUP BY sp.`id_order`
+        ) hsp ON (hsp.`id_order` = a.`id_order`)
+        LEFT JOIN (
+            SELECT spod2.`id_order`, COUNT(spod2.`id_service_product_order_detail`) AS num_products
+            FROM `'._DB_PREFIX_.'service_product_order_detail` spod2
+            WHERE spod2.`id_htl_booking_detail` = 0
+            GROUP BY spod2.`id_order`
+        ) spn ON (spn.`id_order` = a.`id_order`)
+        LEFT JOIN (
+            SELECT hbd2.`id`, IF(rb.`id_htl_booking` IS NULL, 0, 1) AS is_room_refunded
             FROM `'._DB_PREFIX_.'htl_booking_detail` hbd2
+            LEFT JOIN ('.OrderReturn::getRefundedBookingIdsSubquery().' GROUP BY ord.`id_htl_booking`) rb ON (rb.`id_htl_booking` = hbd2.`id`)
         ) rrb ON (rrb.`id` = hbd.`id`)';
 
         $this->_orderBy = 'id_order';
@@ -897,6 +925,11 @@ class AdminOrdersControllerCore extends AdminController
             $currentRoomStatus = (int) Tools::getValue('current_room_status');
             $htlOrderStatus = $objHotelBookingStatus->getAllStatuses($this->context->language->id);
             $allowedStatuses = HotelBookingStatus::getAllowedTransitions($currentRoomStatus);
+            // no transition is allowed out of a terminal (final) status
+            $objCurrentStatus = new HotelBookingStatus($currentRoomStatus);
+            if (Validate::isLoadedObject($objCurrentStatus) && $objCurrentStatus->is_terminal) {
+                $allowedStatuses = array();
+            }
             foreach ($htlOrderStatus as &$status) {
                 $status['disabled'] = !in_array((int) $status['id_status'], $allowedStatuses);
             }
@@ -907,6 +940,8 @@ class AdminOrdersControllerCore extends AdminController
                     'current_index' => self::$currentIndex,
                     'hotel_order_status' => $htlOrderStatus,
                     'ROOM_STATUS_ASSIGNED' => HotelBookingDetail::STATUS_ASSIGNED,
+                    'ROOM_STATUS_CHECKED_IN' => HotelBookingDetail::STATUS_CHECKED_IN,
+                    'ROOM_STATUS_CHECKED_OUT' => HotelBookingDetail::STATUS_CHECKED_OUT,
                     'current_room_status' => $currentRoomStatus
                 )
             );
@@ -1737,7 +1772,7 @@ class AdminOrdersControllerCore extends AdminController
 	                        $message->save();
                         Tools::redirectAdmin(self::$currentIndex.'&id_order='.(int) $idOrder.'&vieworder&conf=52&token='.$this->token);
                     } else {
-                        $this->errors[] = $this->l('Some error occured. Please try again.');
+                        $this->errors[] = $this->l('Some error occurred. Please try again.');
                     }
                 }
             } else {
@@ -1794,7 +1829,7 @@ class AdminOrdersControllerCore extends AdminController
 	                        $message->save();
                         Tools::redirectAdmin(self::$currentIndex.'&id_order='.(int)$idOrder.'&vieworder&conf=53&token='.$this->token);
                     } else {
-                        $this->errors[] = $this->l('Some error occured. Please try again.');
+                        $this->errors[] = $this->l('Some error occurred. Please try again.');
                     }
                 }
             } else {
@@ -5182,13 +5217,13 @@ class AdminOrdersControllerCore extends AdminController
             } else {
                 die(json_encode(array(
                     'result' => false,
-                    'error' => Tools::displayError('Some error occured Please try again.'),
+                    'error' => Tools::displayError('Some error occurred. Please try again.'),
                     )));
             }
         } else {
             die(json_encode(array(
                 'result' => false,
-                'error' => Tools::displayError('Some error occured Please try again.'),
+                'error' => Tools::displayError('Some error occurred. Please try again.'),
             )));
         }
 
@@ -7463,7 +7498,7 @@ class AdminOrdersControllerCore extends AdminController
         if ($id_hotel == '') {
             die(json_encode(array(
                 'result' => false,
-                'error' => Tools::displayError('Hotel Id is mising.'),
+                'error' => Tools::displayError('Hotel ID is missing.'),
             )));
         } elseif ($id_room == '') {
             die(json_encode(array(
@@ -8012,7 +8047,7 @@ class AdminOrdersControllerCore extends AdminController
                             }
                         } elseif (is_array($serviceQuantities) && isset($serviceQuantities[$idRoomTypeServiceProductOrderDetail]) && $serviceQuantities[$idRoomTypeServiceProductOrderDetail] > 1) {
                             $response['hasError'] = true;
-                            $response['errors'][] = Tools::displayError('Can not order multiple quanitity for service').': '.$objServiceProductOrderDetail->name;
+                            $response['errors'][] = Tools::displayError('Cannot order multiple quantity for service').': '.$objServiceProductOrderDetail->name;
                         }
 
                         if (!isset($serviceUnitPrices[$idRoomTypeServiceProductOrderDetail])
@@ -8148,7 +8183,7 @@ class AdminOrdersControllerCore extends AdminController
 
                     if (!$result) {
                         $response['hasError'] = true;
-                        $response['errors'][] = Tools::displayError('Error while updating service, please try again after refresing the page');
+                        $response['errors'][] = Tools::displayError('Error while updating service, please try again after refreshing the page');
                     } else {
                         $this->sendChangedNotification($objOrder);
                         $response['service_panel']= $servicesBlock = $this->processRenderServicesPanel(
@@ -9032,6 +9067,11 @@ class AdminOrdersControllerCore extends AdminController
                 $this->errors[] = Tools::displayError('Invalid booking status found.');
             } elseif ($newStatus == $objHotelBookingDetail->id_status) {
                 $this->errors[] = Tools::displayError('This room is already set to the selected status.');
+            } elseif (($objCurrentStatus = new HotelBookingStatus((int) $objHotelBookingDetail->id_status))
+                && Validate::isLoadedObject($objCurrentStatus)
+                && $objCurrentStatus->is_terminal
+            ) {
+                $this->errors[] = Tools::displayError('Room status cannot be changed as the current status of this room is final.');
             } elseif (($newStatus == HotelBookingDetail::STATUS_NO_SHOW || $newStatus == HotelBookingDetail::STATUS_CANCELLED)
                 && ($objHotelBookingDetail->id_status == HotelBookingDetail::STATUS_CHECKED_IN
                     || $objHotelBookingDetail->id_status == HotelBookingDetail::STATUS_CHECKED_OUT)
@@ -9053,6 +9093,24 @@ class AdminOrdersControllerCore extends AdminController
                 }
             } elseif ($newStatus == HotelBookingDetail::STATUS_NO_SHOW && strtotime($dateFrom) > time()) {
                 $this->errors[] = Tools::displayError('Room cannot be marked as No-show before the booking\'s check-in date.');
+            }
+
+            // reverting a No-show/Cancelled room makes it occupy the inventory again
+            if (empty($this->errors)
+                && ($objHotelBookingDetail->id_status == HotelBookingDetail::STATUS_NO_SHOW
+                    || $objHotelBookingDetail->id_status == HotelBookingDetail::STATUS_CANCELLED)
+                && $newStatus != HotelBookingDetail::STATUS_NO_SHOW
+                && $newStatus != HotelBookingDetail::STATUS_CANCELLED
+            ) {
+                if ((new OrderReturn())->hasCompletelyRefundedBooking($objHotelBookingDetail->id)) {
+                    $this->errors[] = Tools::displayError('Room status cannot be changed as this room booking has already been refunded.');
+                } elseif ($objHotelBookingDetail->chechRoomBooked(
+                    $objHotelBookingDetail->id_room,
+                    $objHotelBookingDetail->date_from,
+                    $objHotelBookingDetail->date_to
+                )) {
+                    $this->errors[] = Tools::displayError('Room status cannot be changed as this room is already booked in another booking for the same dates. Please reallocate the room first.');
+                }
             }
 
             if ($objHotelBookingDetail->id_status == HotelBookingDetail::STATUS_CHECKED_OUT
@@ -9141,8 +9199,29 @@ class AdminOrdersControllerCore extends AdminController
                             ? OrderReturn::EVENT_TYPE_CANCELLATION
                             : OrderReturn::EVENT_TYPE_NO_SHOW;
 
+                        // a No-show room moved to Cancelled usually already has a refund
+                        // request from the No-show: reuse it instead of creating a duplicate
+                        $existingRefundRequest = false;
+                        if ($objHotelBookingDetail->id_status == HotelBookingDetail::STATUS_NO_SHOW
+                            && ($refundRequests = OrderReturn::getOrdersReturnDetail($order->id, 0, $objHotelBookingDetail->id))
+                        ) {
+                            // latest request first
+                            $latestRequest = reset($refundRequests);
+                            if (!$latestRequest['denied']) {
+                                $existingRefundRequest = true;
+                                if (!$latestRequest['refunded']) {
+                                    // still pending: it now stands for the cancellation
+                                    $objOrderReturn = new OrderReturn((int) $latestRequest['id_order_return']);
+                                    if (Validate::isLoadedObject($objOrderReturn)) {
+                                        $objOrderReturn->event_type = $eventType;
+                                        $objOrderReturn->save();
+                                    }
+                                }
+                            }
+                        }
+
                         // no refund request is created if refund is disabled for the hotel
-                        if ($order->isReturnable()) {
+                        if (!$existingRefundRequest && $order->isReturnable()) {
                             $objOrderReturn = new OrderReturn();
                             $objOrderReturn->id_customer = $order->id_customer;
                             $objOrderReturn->id_order = $order->id;
@@ -9183,6 +9262,13 @@ class AdminOrdersControllerCore extends AdminController
                         $success = $statusChanged;
                     } else {
                         $statusChanged = $objHotelBookingDetail->changeStatus($newStatus, $changeParams);
+
+                        if ($statusChanged) {
+                            // a No-show room reverted back: the order is no longer completely
+                            // No-show/Cancelled, so restore its status from the paid amount
+                            $order = new Order($order->id);
+                            $order->changeOrderStatusOnRoomBookingStatusChange();
+                        }
                         $success = $statusChanged;
                     }
 
